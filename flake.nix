@@ -1,5 +1,5 @@
 {
-  description = "NGO Logistics Client + Server";
+  description = "NGOLogisticsCG — Backend, Client, and Common Haskell packages";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";
@@ -9,25 +9,50 @@
   outputs = { self, nixpkgs, flake-utils }:
     flake-utils.lib.eachDefaultSystem (system:
       let
-        pkgs = import nixpkgs { inherit system; };
-      in {
-        packages.${system}.default = pkgs.callPackage ./pkgs { };
+        pkgs = import nixpkgs {
+          inherit system;
+        };
+      in
+      {
+        packages.default = pkgs.stdenv.mkDerivation {
+          pname = "ngologisticscg";
+          version = "0.1.0";
 
-        devShells.${system}.default = pkgs.mkShell {
-          name = "ngologistics-dev";
+          src = ./.;
+
           buildInputs = with pkgs; [
-            git
+            haskell.compiler.ghc98
             cabal-install
-            ghc
-            nodejs
-            yarn
+            sqlite
+            openssl
+          ];
+
+          buildPhase = ''
+            echo "Building NGOLogisticsCG..."
+            cabal build all
+          '';
+
+          installPhase = ''
+            mkdir -p $out/bin
+            cp -r dist-newstyle $out/
+          '';
+        };
+
+        devShells.default = pkgs.mkShell {
+          name = "NGOLogisticsCG-dev";
+
+          buildInputs = with pkgs; [
+            haskell.compiler.ghc98
+            cabal-install
+            sqlite
+            openssl
+            git
             pkg-config
-            zlib
           ];
 
           shellHook = ''
             echo "🧩 Entered NGOLogisticsCG dev shell"
-            export CABAL_CONFIG="${CABAL_CONFIG:-$PWD/cabal.project}"
+            export CABAL_CONFIG="\${CABAL_CONFIG:-$PWD/cabal.project}"
             echo "Using cabal config: $CABAL_CONFIG"
           '';
         };
