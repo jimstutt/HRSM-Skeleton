@@ -1,64 +1,50 @@
 {
-  description = "NGOLogisticsCG — integrated backend and wasm client built via ghc-wasm-meta";
+  description = "NGOLogisticsCG — A Nix flake with Haskell devshell and Cabal support";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";
     flake-utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = { self, nixpkgs, flake-utils }:
+  outputs = { self, nixpkgs, flake-utils, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs {
           inherit system;
-          overlays = [];
         };
 
-        wasmGhc = import ./pkgs/wasm32-wasi-ghc-full.nix {
-          inherit (pkgs) stdenv fetchurl gnumake cmake llvmPackages lib writeTextFile;
-          pkgsCross = import nixpkgs { crossSystem = { config = "wasm32-wasi"; }; };
-        };
+        haskellPackages = pkgs.haskellPackages;
+
       in
       {
-        packages.${system}.default = pkgs.stdenv.mkDerivation {
-          pname = "ngo-logistics";
-          version = "0.1.0";
+        packages.default = haskellPackages.callCabal2nix "NGOLogisticsCG" ./. { };
 
-          src = ./.;
+        devShells.default = pkgs.mkShell {
+          name = "NGOLogisticsCG-devshell";
 
-          buildInputs = [
-            pkgs.haskell.compiler.ghc98
-            pkgs.cabal-install
-          ];
-
-          buildPhase = ''
-            echo "Building NGOLogisticsCG..."
-            cabal build all
-          '';
-
-          installPhase = ''
-            mkdir -p $out/bin
-            cp -r dist-newstyle/build/*/*/ngo-logistics* $out/bin/ || true
-            echo "✅ Build complete. Binaries installed to $out/bin"
-          '';
-        };
-
-        devShells.${system}.default = pkgs.mkShell {
-          name = "ghc-wasm-devshell";
-          buildInputs = [
-            pkgs.haskell.compiler.ghc98
-            pkgs.cabal-install
-            pkgs.nodejs
-            pkgs.yarn
-            wasmGhc
+          buildInputs = with pkgs; [
+            cabal-install
+            ghc
+            haskell-language-server
+            git
+            nixpkgs-fmt
           ];
 
           shellHook = ''
             echo "🧩 Entered NGOLogisticsCG dev shell"
-            export CABAL_CONFIG="\${CABAL_CONFIG:-\${PWD}/cabal.project}"
+
+            # Correctly escape Bash variable expansion inside Nix string
+            export CABAL_CONFIG="${CABAL_CONFIG:-${PWD}/cabal.project}"
+
             echo "Using cabal config: $CABAL_CONFIG"
-            export PATH=$PATH:$PWD/scripts
-            echo "PATH updated with ./scripts"
+
+            # Helpful Cabal environment setup
+            if [ -f "$CABAL_CONFIG" ]; then
+              echo "Cabal project file found ✅"
+            else
+              echo "⚠️  No cabal.project file found, creating a minimal one..."
+              echo "packages: ." > "$CABAL_CONFIG"
+            fi
           '';
         };
       });
