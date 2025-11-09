@@ -1,5 +1,5 @@
 {
-  description = "NGOLogisticsCG Haskell project with Nix flakes";
+  description = "NGOLogisticsCG full-stack Haskell project with WASM and server components";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";
@@ -9,35 +9,55 @@
   outputs = { self, nixpkgs, flake-utils }:
     flake-utils.lib.eachDefaultSystem (system:
       let
-        pkgs = import nixpkgs { inherit system; };
+        pkgs = import nixpkgs {
+          inherit system;
+        };
+
+        # Common dependencies for development
+        devTools = with pkgs; [
+          ghc
+          cabal-install
+          haskell-language-server
+          hlint
+          ormolu
+          git
+          gnumake
+          cmake
+          llvmPackages.clang
+          nodejs
+        ];
       in {
-        packages.default = pkgs.haskellPackages.callPackage ./pkgs {};
-
+        # Default development shell
         devShells.default = pkgs.mkShell {
-          name = "ngo-logistics-dev-shell";
-          buildInputs = with pkgs; [
-            cabal-install
-            ghc
-            haskell-language-server
-            hlint
-            ormolu
-            git
-          ];
+          name = "ngologisticscg-dev-shell";
+          buildInputs = devTools;
 
-          # ✅ Properly escaped shellHook for Nix
           shellHook = ''
-            echo "🧩 Entered NGOLogisticsCG dev shell"
+            echo "🧩 Entered NGOLogisticsCG development shell"
 
-            # Use ''$ to escape Bash variables (so Nix doesn’t try to expand them)
-            export CABAL_CONFIG="''${CABAL_CONFIG:-''${PWD}/cabal.project}"
-            echo "Using cabal config: ''${CABAL_CONFIG}"
+            # Use single quotes to prevent Nix interpolation and let Bash handle ${}
+            export CABAL_CONFIG='${CABAL_CONFIG:-'"$PWD"'/cabal.project}'
+            echo "Using cabal config: $CABAL_CONFIG"
 
-            if [ -f "''${CABAL_CONFIG}" ]; then
-              echo "✅ Cabal project file found."
-            else
-              echo "⚠️  No cabal.project found in ''${PWD}"
-            fi
+            export PATH=$PWD/scripts:$PATH
+            echo "Scripts available in PATH"
           '';
         };
+
+        # CI shell: used for builds and tests
+        devShells.ci = pkgs.mkShell {
+          name = "ngologisticscg-ci-shell";
+          buildInputs = devTools;
+
+          shellHook = ''
+            echo "🏗️  CI build shell for NGOLogisticsCG"
+            cabal update
+            cabal build all
+            cabal test all
+          '';
+        };
+
+        # Optional formatter
+        formatter = pkgs.nixpkgs-fmt;
       });
 }
