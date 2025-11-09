@@ -33,12 +33,11 @@
           shellHook = ''
             echo "🧩 Entered NGOLogisticsCG dev shell"
 
-            # Correctly escape Bash variable expansion inside Nix string
-            export CABAL_CONFIG="${CABAL_CONFIG:-${PWD}/cabal.project}"
+            # Use $$ to escape Bash variable expansions in Nix
+            export CABAL_CONFIG="$${CABAL_CONFIG:-$${PWD}/cabal.project}"
 
             echo "Using cabal config: $CABAL_CONFIG"
 
-            # Helpful Cabal environment setup
             if [ -f "$CABAL_CONFIG" ]; then
               echo "Cabal project file found ✅"
             else
