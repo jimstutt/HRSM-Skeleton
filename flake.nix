@@ -24,18 +24,18 @@
             git
           ];
 
-          # 🔧 Shell startup commands
+          # ✅ Properly escaped shellHook for Nix
           shellHook = ''
             echo "🧩 Entered NGOLogisticsCG dev shell"
 
-            # Use literal Bash syntax (no Nix interpolation here)
-            export CABAL_CONFIG="${CABAL_CONFIG:-${PWD}/cabal.project}"
-            echo "Using cabal config: ${CABAL_CONFIG}"
+            # Use ''$ to escape Bash variables (so Nix doesn’t try to expand them)
+            export CABAL_CONFIG="''${CABAL_CONFIG:-''${PWD}/cabal.project}"
+            echo "Using cabal config: ''${CABAL_CONFIG}"
 
-            if [ -f "$CABAL_CONFIG" ]; then
+            if [ -f "''${CABAL_CONFIG}" ]; then
               echo "✅ Cabal project file found."
             else
-              echo "⚠️  No cabal.project found in ${PWD}"
+              echo "⚠️  No cabal.project found in ''${PWD}"
             fi
           '';
         };
