@@ -1,44 +1,36 @@
-{ stdenv
-, fetchurl
-, gnumake
-, cmake
-, llvmPackages
-, lib
-, writeTextFile
-, pkgsCross ? null
-}:
+# pkgs/wasm32-wasi-ghc-full.nix
+{ pkgs ? import <nixpkgs> { } }:
 
 let
-  cross = if pkgsCross != null then pkgsCross else
-    import <nixpkgs> { crossSystem = { config = "wasm32-wasi"; }; };
+  # Import nixpkgs for both the host (Linux) and the WASM target
+  hostPkgs = pkgs;
+  wasmPkgs = import pkgs.path {
+    crossSystem = { config = "wasm32-wasi"; };
+  };
 
 in
-stdenv.mkDerivation {
+hostPkgs.stdenv.mkDerivation {
   pname = "wasm32-wasi-ghc-full";
   version = "1.0";
 
-  # This derivation acts as a meta-package — it ensures required tools exist.
+  # This derivation doesn’t build new binaries — it just exposes tools
+  dontBuild = true;
+  dontInstall = true;
+
   buildInputs = [
-    cross.llvmPackages.clang
-    cross.llvmPackages.lld
-    gnumake
-    cmake
+    hostPkgs.ghc
+    hostPkgs.cabal-install
+    hostPkgs.wasi-sdk
+    wasmPkgs.llvmPackages_15.lld
   ];
 
-  dontUnpack = true;
-  dontBuild = true;
-
-  installPhase = ''
-    mkdir -p $out/bin
-    echo "#!/bin/sh" > $out/bin/wasm32-wasi-ghc
-    echo "echo 'Fake wasm32-wasi-ghc environment: use clang/lld from nixpkgs-cross'" >> $out/bin/wasm32-wasi-ghc
-    chmod +x $out/bin/wasm32-wasi-ghc
+  shellHook = ''
+    echo "✅ Loaded wasm32-wasi GHC cross environment"
+    export TARGET=wasi32
+    export CC=clang
+    export LD=wasm-ld
+    export AR=llvm-ar
+    export NM=llvm-nm
+    export RANLIB=llvm-ranlib
   '';
-
-  meta = with lib; {
-    description = "WASM32-WASI cross GHC toolchain stub with clang/lld support";
-    license = licenses.mit;
-    maintainers = [ maintainers.example ];
-    platforms = platforms.all;
-  };
 }
