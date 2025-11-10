@@ -1,0 +1,31 @@
+-- Root cabal project file for NGOLogisticsCG
+-- Location: ~/Dev/NGOLogisticsCG/cabal.project
+
+-- Define what local packages to include
+packages:
+  ./backend
+
+-- Enable test suites and benchmarks globally
+tests: True
+benchmarks: True
+
+-- Compiler / tool configuration
+-- You can override or specify particular program locations here.
+program-locations
+  ghc-wasm32-wasi: ./pkgs/wasm32-wasi-ghc-full.nix
+
+-- Additional build options
+package *
+  optimization: 2
+  ghc-options: -Wall -O2
+
+-- Optional: extra repositories or index-state for reproducibility
+-- index-state: 2025-11-01T00:00:00Z
+
+-- Optional: specific flags for packages
+-- package NGOLogisticsCG
+--   flags: +use-wasm
+
+-- Optional: if you want cabal to use nix-style builds
+-- with-compiler: ghc
+-- enable-nix: True
