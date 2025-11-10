@@ -1,0 +1,53 @@
+# Haskell build
+dist-newstyle/
+*.hi
+*.o
+*.dyn_o
+*.dyn_hi
+
+# Nix
+result/
+.nix-*
+
+# Node/Vite
+node_modules/
+wasm/node_modules/
+wasm/public/hello.wasm
+
+# Certificates and logs
+certs/*.pem
+*.log
+tmp/
+wasm/node_modules
+wasm/node_modules
+# Node / Yarn
+node_modules/
+**/node_modules/
+yarn-error.log
+.yarn/*
+.pnp.*
+
+# Haskell
+dist/
+dist-newstyle/
+.result
+.result-*
+*.hi
+*.o
+*.dyn_o
+*.dyn_hi
+*.prof
+*.hp
+
+# WASM / Browser build artefacts
+*.wasm
+*.js.map
+*.bundle.js
+*.bundle.mjs
+logistics-client/client-dist/
+logistics-client/logistics-client/client-dist/
+
+# Misc
+tmp/
+.env
+.DS_Store

@@ -1,0 +1,90 @@
+Laptop-14-bk0xx:~/Dev$ tree NGOLogisticsCG
+NGOLogisticsCG
+├── backend
+│   ├── NGOLogisticsCG.cabal
+│   ├── sql
+│   │   └── logistics.sql
+│   └── src
+│       └── Main.hs
+├── cabal.project
+├── cabal.project.local
+├── CHANGELOG.md
+├── dist-newstyle
+│   ├── build
+│   │   └── x86_64-linux
+│   │       └── ghc-9.8.4
+│   │           └── NGOLogisticsCG-0.1.0.0
+│   │               └── x
+│   │                   └── NGOLogisticsCG
+│   │                       └── noopt
+│   │                           ├── build
+│   │                           │   └── NGOLogisticsCG
+│   │                           │       └── autogen
+│   │                           │           ├── cabal_macros.h
+│   │                           │           ├── PackageInfo_NGOLogisticsCG.hs
+│   │                           │           └── Paths_NGOLogisticsCG.hs
+│   │                           ├── cache
+│   │                           │   └── config
+│   │                           ├── package.conf.inplace
+│   │                           │   ├── package.cache
+│   │                           │   └── package.cache.lock
+│   │                           └── setup-config
+│   ├── build.log
+│   ├── cache
+│   │   ├── compiler
+│   │   ├── config
+│   │   ├── elaborated-plan
+│   │   ├── improved-plan
+│   │   ├── plan.json
+│   │   ├── solver-plan
+│   │   ├── source-hashes
+│   │   └── up-to-date
+│   ├── packagedb
+│   │   └── ghc-9.8.4
+│   │       ├── package.cache
+│   │       └── package.cache.lock
+│   └── tmp
+├── flake.lock
+├── flake.nix
+├── LICENSE
+├── logistics-client
+│   ├── logistics-client
+│   │   └── client-dist
+│   ├── logistics-client.cabal
+│   ├── scripts
+│   │   └── build-client.sh
+│   ├── src
+│   │   ├── client.sccs
+│   │   ├── Main.hs
+│   │   └── WASMExports.hs
+│   └── static
+│       ├── client-boot.js
+│       └── index.html
+├── logistics-common
+│   ├── logistics-common.cabal
+│   └── src
+│       └── Types.hs
+├── logistics-server
+│   ├── logistics-server.cabal
+│   └── src
+│       ├── API.hs
+│       ├── Auth.hs
+│       ├── DB.hs
+│       ├── Main.hs
+│       └── Middleware
+│           └── RateLimit.hs
+├── pkgs
+│   └── wasm32-wasi-ghc-full.nix
+├── scripts
+│   ├── build-wasm.sh
+│   ├── cleanup.sh
+│   ├── mkcerts.sh
+│   ├── openssl.sh
+│   ├── prune-vendor.sh
+│   ├── run-wasm.sh
+│   ├── serve-wasm.sh
+│   └── setenv.sh
+└── test
+    └── Main.hs
+
+35 directories, 52 files

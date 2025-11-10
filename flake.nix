@@ -1,5 +1,5 @@
 {
-  description = "NGOLogisticsCG full-stack Haskell project with WASM and server components";
+  description = "NGOLogisticsCG — integrated Haskell backend and client build using Nix flakes and GHC";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";
@@ -11,53 +11,35 @@
       let
         pkgs = import nixpkgs {
           inherit system;
+          overlays = [];
         };
 
-        # Common dependencies for development
-        devTools = with pkgs; [
-          ghc
-          cabal-install
-          haskell-language-server
-          hlint
-          ormolu
-          git
-          gnumake
-          cmake
-          llvmPackages.clang
-          nodejs
-        ];
-      in {
-        # Default development shell
-        devShells.default = pkgs.mkShell {
-          name = "ngologisticscg-dev-shell";
-          buildInputs = devTools;
+        # WASM cross-compilation helper
+        wasmGhc = import ./pkgs/wasm32-wasi-ghc-full.nix {
+          inherit (pkgs) stdenv fetchurl gnumake cmake llvmPackages lib writeTextFile;
+          pkgsCross = import nixpkgs { crossSystem = { config = "wasm32-wasi"; }; };
+        };
+      in
+      {
+        packages.${system}.default = pkgs.haskellPackages.callCabal2nix "NGOLogisticsCG" ./logistics-server { };
+
+        devShells.${system}.default = pkgs.mkShell {
+          name = "ngologisticscg-dev";
+          buildInputs = with pkgs; [
+            cabal-install
+            ghc
+            haskell-language-server
+            hlint
+            ormolu
+            wasmGhc
+          ];
 
           shellHook = ''
             echo "🧩 Entered NGOLogisticsCG development shell"
-
-            # Use single quotes to prevent Nix interpolation and let Bash handle ${}
-            export CABAL_CONFIG='${CABAL_CONFIG:-'"$PWD"'/cabal.project}'
-            echo "Using cabal config: $CABAL_CONFIG"
-
-            export PATH=$PWD/scripts:$PATH
-            echo "Scripts available in PATH"
+            echo "Using cabal.project from: $PWD"
           '';
         };
 
-        # CI shell: used for builds and tests
-        devShells.ci = pkgs.mkShell {
-          name = "ngologisticscg-ci-shell";
-          buildInputs = devTools;
-
-          shellHook = ''
-            echo "🏗️  CI build shell for NGOLogisticsCG"
-            cabal update
-            cabal build all
-            cabal test all
-          '';
-        };
-
-        # Optional formatter
-        formatter = pkgs.nixpkgs-fmt;
+        formatter.${system} = pkgs.nixfmt-rfc-style;
       });
 }

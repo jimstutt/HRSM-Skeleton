@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Logistics Client (WASM)</title>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 1rem; }
+    input, button { margin: 0.25rem 0; display:block }
+  </style>
+</head>
+<body>
+  <h1>Logistics Client (WASM)</h1>
+
+  <section id="auth">
+    <h2>Login</h2>
+    <input id="username" placeholder="username" />
+    <input id="password" placeholder="password" type="password" />
+    <button id="btnLogin">Login</button>
+    <div id="loginResult"></div>
+  </section>
+
+  <section id="items">
+    <h2>Items</h2>
+    <button id="btnList">List items</button>
+    <pre id="itemsOut"></pre>
+
+    <h3>Create Item</h3>
+    <input id="itemName" placeholder="name" />
+    <input id="itemQty" placeholder="quantity" type="number" />
+    <input id="itemLoc" placeholder="location" />
+    <button id="btnCreate">Create</button>
+  </section>
+
+  <!-- wasm/js glue produced by ghc-wasm-meta -->
+  <script src="client-boot.js"></script>
+</body>
+</html>

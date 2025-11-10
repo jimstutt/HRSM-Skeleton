@@ -1,0 +1,1 @@
+export DB_HOST=127.0.0.1 export DB_USER=myuser export DB_PASS=mypass export DB_NAME=logistics export DB_PORT=3306 export JWT_SECRET="a-very-long-secret-change-me" export CORS_ORIGIN="https://localhost:3000" export TLS_CERT=certs/server.crt export TLS_KEY=certs/server.key export LISTEN_PORT=8443

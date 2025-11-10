@@ -1,31 +1,22 @@
--- Root cabal project file for NGOLogisticsCG
--- Location: ~/Dev/NGOLogisticsCG/cabal.project
+-- cabal.project
+-- Unified configuration for NGOLogisticsCG: backend, common library, and frontend.
 
--- Define what local packages to include
 packages:
-  ./backend
+  logistics-common/
+  logistics-server/
+  logistics-client/
 
--- Enable test suites and benchmarks globally
 tests: True
-benchmarks: True
+benchmarks: False
 
--- Compiler / tool configuration
--- You can override or specify particular program locations here.
+-- Ensure all subprojects use the same compiler and options
 program-locations
-  ghc-wasm32-wasi: ./pkgs/wasm32-wasi-ghc-full.nix
+  ghc-location: /run/current-system/sw/bin/ghc
 
--- Additional build options
 package *
-  optimization: 2
-  ghc-options: -Wall -O2
+  ghc-options: -Wall -O0
+  build-depends: base
 
--- Optional: extra repositories or index-state for reproducibility
--- index-state: 2025-11-01T00:00:00Z
-
--- Optional: specific flags for packages
--- package NGOLogisticsCG
---   flags: +use-wasm
-
--- Optional: if you want cabal to use nix-style builds
--- with-compiler: ghc
--- enable-nix: True
+-- Optional: disable network index warnings if offline
+repository hackage.haskell.org
+  url: https://hackage.haskell.org/
