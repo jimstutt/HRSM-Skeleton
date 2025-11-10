@@ -1,5 +1,5 @@
 {
-  description = "NGOLogisticsCG — integrated Haskell backend and client build using Nix flakes and GHC";
+  description = "NGOLogisticsCG — unified backend and frontend using Nix flakes and GHC/WASM.";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";
@@ -14,16 +14,18 @@
           overlays = [];
         };
 
-        # WASM cross-compilation helper
+        # --- Optional WASM cross-compiler (from pkgs/wasm32-wasi-ghc-full.nix)
         wasmGhc = import ./pkgs/wasm32-wasi-ghc-full.nix {
           inherit (pkgs) stdenv fetchurl gnumake cmake llvmPackages lib writeTextFile;
           pkgsCross = import nixpkgs { crossSystem = { config = "wasm32-wasi"; }; };
         };
       in
       {
-        packages.${system}.default = pkgs.haskellPackages.callCabal2nix "NGOLogisticsCG" ./logistics-server { };
+        # ---- Define buildable package from logistics-server ----
+        packages.default = pkgs.haskellPackages.callCabal2nix "NGOLogisticsCG" ./logistics-server { };
 
-        devShells.${system}.default = pkgs.mkShell {
+        # ---- Developer shell ----
+        devShells.default = pkgs.mkShell {
           name = "ngologisticscg-dev";
           buildInputs = with pkgs; [
             cabal-install
@@ -40,6 +42,7 @@
           '';
         };
 
-        formatter.${system} = pkgs.nixfmt-rfc-style;
+        formatter = pkgs.nixfmt-rfc-style;
       });
 }
+
