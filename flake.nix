@@ -11,21 +11,24 @@
       let
         pkgs = import nixpkgs {
           inherit system;
-          overlays = [];
         };
 
         # --- Optional WASM cross-compiler (from pkgs/wasm32-wasi-ghc-full.nix)
         wasmGhc = import ./pkgs/wasm32-wasi-ghc-full.nix {
           inherit (pkgs) stdenv fetchurl gnumake cmake llvmPackages lib writeTextFile;
-          pkgsCross = import nixpkgs { crossSystem = { config = "wasm32-wasi"; }; };
+          # Explicitly pass current system to avoid builtins.currentSystem usage
+          pkgsCross = import nixpkgs {
+            localSystem = { inherit system; };
+            crossSystem = { config = "wasm32-wasi"; };
+          };
         };
-      in
-      {
-        # ---- Define buildable package from logistics-server ----
-        packages.default = pkgs.haskellPackages.callCabal2nix "NGOLogisticsCG" ./logistics-server { };
+      in {
+        # ---- Buildable package ----
+        packages.${system}.default =
+          pkgs.haskellPackages.callCabal2nix "NGOLogisticsCG" ./logistics-server { };
 
-        # ---- Developer shell ----
-        devShells.default = pkgs.mkShell {
+        # ---- Development shell ----
+        devShells.${system}.default = pkgs.mkShell {
           name = "ngologisticscg-dev";
           buildInputs = with pkgs; [
             cabal-install
@@ -42,6 +45,7 @@
           '';
         };
 
-        formatter = pkgs.nixfmt-rfc-style;
+        # ---- Formatter ----
+        formatter.${system} = pkgs.nixfmt-rfc-style;
       });
 }
