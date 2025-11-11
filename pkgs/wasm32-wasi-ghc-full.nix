@@ -1,54 +1,45 @@
 # pkgs/wasm32-wasi-ghc-full.nix
-#
-# Robust GHC WASM cross environment, compatible with nixpkgs >= 23.11 and 24.05.
-# This file no longer assumes hostPkgs.wasi-sdk exists.
-
-{ pkgs
-, wasiSdk ? null
-}:
+{ pkgs ? import <nixpkgs> { } }:
 
 let
   hostPkgs = pkgs;
   wasmPkgs = import pkgs.path {
-    localSystem = { system = hostPkgs.stdenv.system; };
-    crossSystem = { config = "wasm32-wasi"; };
+    crossSystem = {
+      config = "wasm32-wasi";
+    };
   };
 
-  # Fallback in case caller didn’t supply a wasiSdk
-  resolvedWasiSdk =
-    if wasiSdk != null then wasiSdk else
-    if wasmPkgs ? llvmPackages && wasmPkgs.llvmPackages ? wasi-sdk
-    then wasmPkgs.llvmPackages.wasi-sdk
-    else if hostPkgs ? llvmPackages_15 && hostPkgs.llvmPackages_15 ? wasi-sdk
-    then hostPkgs.llvmPackages_15.wasi-sdk
-    else hostPkgs.stdenv.mkDerivation {
-      pname = "wasi-sdk-fallback";
-      version = "15.0";
-      dontBuild = true;
+  # Prefer internal wasi-sdk if missing
+  wasiSdk = if wasmPkgs ? wasi-sdk then wasmPkgs.wasi-sdk else
+    wasmPkgs.stdenv.mkDerivation {
+      pname = "wasi-sdk";
+      version = "fake";
       dontUnpack = true;
       installPhase = ''
-        mkdir -p $out/bin
-        echo "#!/bin/sh" > $out/bin/wasicc
-        echo "echo '⚠️ Using fallback wasi-sdk stub (no compiler)'" >> $out/bin/wasicc
-        chmod +x $out/bin/wasicc
+        mkdir -p $out
+        echo "⚠️ Using dummy wasi-sdk" > $out/README.txt
       '';
     };
 
-in
-{
   ghcWasmEnv = hostPkgs.mkShell {
     name = "ghc-wasm32-wasi-full";
 
-    buildInputs = with hostPkgs; [
-      ghc
-      cabal-install
-      llvmPackages_15.lld
-      resolvedWasiSdk
+    buildInputs = [
+      hostPkgs.gcc
+      hostPkgs.gnumake
+      hostPkgs.cabal-install
+      wasmPkgs.llvmPackages_15.lld
+      wasiSdk
     ];
 
     shellHook = ''
-      echo "🟣 GHC WASM cross-compilation environment active"
-      echo "Using wasi-sdk at: ${resolvedWasiSdk}"
+      #!/usr/bin/env bash
+      echo "🧩 Entered WASM GHC cross environment"
+      echo "Using LLVM: $(lld --version 2>/dev/null || echo 'not found')"
+      echo "Using fake wasi-sdk path: ${wasiSdk}"
     '';
   };
+in
+{
+  inherit ghcWasmEnv;
 }
