@@ -13,7 +13,12 @@
           inherit system;
         };
 
-        # Import local WASM GHC toolchain definition
+        # Define WASI cross toolchain environment
+        wasiPkgs = import nixpkgs {
+          crossSystem = { config = "wasm32-wasi"; };
+        };
+
+        # Import local WASM GHC derivation
         wasmGhc = import ./pkgs/wasm32-wasi-ghc-full.nix { inherit pkgs; };
 
       in {
@@ -26,7 +31,7 @@
             cabal-install
             git
             llvmPackages_15.lld
-            wasi-sdk
+            wasiPkgs.wasi-sdk
             wasmGhc
           ];
 
