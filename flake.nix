@@ -13,11 +13,11 @@
           inherit system;
         };
 
-        # Import your WASM GHC environment correctly
+        # Import local WASM GHC toolchain definition
         wasmGhc = import ./pkgs/wasm32-wasi-ghc-full.nix { inherit pkgs; };
 
       in {
-        # --- Main development shell ---
+        # === DevShell ===
         devShells.default = pkgs.mkShell {
           name = "ngologisticscg-dev";
 
@@ -32,27 +32,40 @@
 
           shellHook = ''
             echo "🧩 Entered NGOLogisticsCG development shell"
-            echo "Using GHC: $(ghc --version 2>/dev/null || echo 'not found')"
-            echo "Using Cabal: $(cabal --version 2>/dev/null || echo 'not found')"
 
-            # Setup cabal config path
-            export CABAL_CONFIG="${CABAL_CONFIG:-$PWD/cabal.project}"
-            echo "Using cabal config: $CABAL_CONFIG"
+            # -- Verify toolchain availability --
+            if ! command -v ghc >/dev/null 2>&1; then
+              echo "⚠️  GHC not found in PATH!" >&2
+            else
+              echo "✅ GHC: $(ghc --version)"
+            fi
 
-            # Cross-compilation hints
+            if ! command -v cabal >/dev/null 2>&1; then
+              echo "⚠️  Cabal not found in PATH!" >&2
+            else
+              echo "✅ Cabal: $(cabal --version | head -n 1)"
+            fi
+
+            # -- Setup cabal configuration file safely --
+            export CABAL_CONFIG="$${CABAL_CONFIG:-$${PWD}/cabal.project}"
+            echo "📦 Using cabal config: $${CABAL_CONFIG}"
+
+            # -- Cross-compilation toolchain setup --
             export TARGET=wasi32
             export CC=clang
             export LD=wasm-ld
             export AR=llvm-ar
             export NM=llvm-nm
             export RANLIB=llvm-ranlib
+
+            echo "🧠 Environment ready for WASM + Haskell builds"
           '';
         };
 
-        # --- Define a default package (logistics-server backend) ---
+        # === Package build (default backend app) ===
         packages.default = pkgs.haskellPackages.callCabal2nix "ngologisticscg" ./logistics-server { };
 
-        # --- Formatter and checkers ---
+        # === Formatter ===
         formatter = pkgs.nixpkgs-fmt;
       });
 }
