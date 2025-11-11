@@ -9,20 +9,22 @@
   outputs = { self, nixpkgs, flake-utils }:
     flake-utils.lib.eachDefaultSystem (system:
       let
+        # --- Native system environment ---
         pkgs = import nixpkgs {
-          inherit system;
+          localSystem = { inherit system; };
         };
 
-        # Define WASI cross toolchain environment
+        # --- WASM cross-compilation toolchain ---
         wasiPkgs = import nixpkgs {
+          localSystem = { inherit system; };
           crossSystem = { config = "wasm32-wasi"; };
         };
 
-        # Import local WASM GHC derivation
+        # --- Local wasm GHC derivation ---
         wasmGhc = import ./pkgs/wasm32-wasi-ghc-full.nix { inherit pkgs; };
 
       in {
-        # === DevShell ===
+        # === Development shell ===
         devShells.default = pkgs.mkShell {
           name = "ngologisticscg-dev";
 
@@ -37,25 +39,13 @@
 
           shellHook = ''
             echo "🧩 Entered NGOLogisticsCG development shell"
+            echo "✅ GHC: $(ghc --version)"
+            echo "✅ Cabal: $(cabal --version | head -n 1)"
 
-            # -- Verify toolchain availability --
-            if ! command -v ghc >/dev/null 2>&1; then
-              echo "⚠️  GHC not found in PATH!" >&2
-            else
-              echo "✅ GHC: $(ghc --version)"
-            fi
-
-            if ! command -v cabal >/dev/null 2>&1; then
-              echo "⚠️  Cabal not found in PATH!" >&2
-            else
-              echo "✅ Cabal: $(cabal --version | head -n 1)"
-            fi
-
-            # -- Setup cabal configuration file safely --
             export CABAL_CONFIG="$${CABAL_CONFIG:-$${PWD}/cabal.project}"
             echo "📦 Using cabal config: $${CABAL_CONFIG}"
 
-            # -- Cross-compilation toolchain setup --
+            # Cross toolchain
             export TARGET=wasi32
             export CC=clang
             export LD=wasm-ld
@@ -67,10 +57,11 @@
           '';
         };
 
-        # === Package build (default backend app) ===
+        # === Main build target (backend) ===
         packages.default = pkgs.haskellPackages.callCabal2nix "ngologisticscg" ./logistics-server { };
 
         # === Formatter ===
         formatter = pkgs.nixpkgs-fmt;
       });
 }
+
