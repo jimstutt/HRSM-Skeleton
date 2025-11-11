@@ -1,45 +1,46 @@
 # pkgs/wasm32-wasi-ghc-full.nix
-{ pkgs ? import <nixpkgs> { } }:
+{ pkgs }:
 
 let
-  hostPkgs = pkgs;
+  # Define host system and cross target
+  hostSystem = pkgs.stdenv.system;
+  wasmSystem = "wasm32-wasi";
+
+  # Import nixpkgs for WASM cross system
   wasmPkgs = import pkgs.path {
+    system = hostSystem;
     crossSystem = {
-      config = "wasm32-wasi";
+      config = wasmSystem;
     };
   };
 
-  # Prefer internal wasi-sdk if missing
+  # Use a fallback wasi-sdk if missing
   wasiSdk = if wasmPkgs ? wasi-sdk then wasmPkgs.wasi-sdk else
     wasmPkgs.stdenv.mkDerivation {
-      pname = "wasi-sdk";
-      version = "fake";
+      pname = "dummy-wasi-sdk";
+      version = "0.0.1";
       dontUnpack = true;
       installPhase = ''
         mkdir -p $out
-        echo "⚠️ Using dummy wasi-sdk" > $out/README.txt
+        echo "⚠️ dummy wasi-sdk placeholder" > $out/README.txt
       '';
     };
 
-  ghcWasmEnv = hostPkgs.mkShell {
-    name = "ghc-wasm32-wasi-full";
+in pkgs.mkShell {
+  name = "ghc-wasm32-wasi-full";
 
-    buildInputs = [
-      hostPkgs.gcc
-      hostPkgs.gnumake
-      hostPkgs.cabal-install
-      wasmPkgs.llvmPackages_15.lld
-      wasiSdk
-    ];
+  buildInputs = [
+    pkgs.gnumake
+    pkgs.gcc
+    pkgs.cabal-install
+    pkgs.llvmPackages_15.lld
+    wasiSdk
+  ];
 
-    shellHook = ''
-      #!/usr/bin/env bash
-      echo "🧩 Entered WASM GHC cross environment"
-      echo "Using LLVM: $(lld --version 2>/dev/null || echo 'not found')"
-      echo "Using fake wasi-sdk path: ${wasiSdk}"
-    '';
-  };
-in
-{
-  inherit ghcWasmEnv;
+  shellHook = ''
+    echo "🧩 Entered WASM GHC environment"
+    echo "Host system: ${hostSystem}"
+    echo "Cross system: ${wasmSystem}"
+    echo "WASI SDK path: ${wasiSdk}"
+  '';
 }
