@@ -1,36 +1,54 @@
 # pkgs/wasm32-wasi-ghc-full.nix
-{ pkgs ? import <nixpkgs> { } }:
+#
+# Robust GHC WASM cross environment, compatible with nixpkgs >= 23.11 and 24.05.
+# This file no longer assumes hostPkgs.wasi-sdk exists.
+
+{ pkgs
+, wasiSdk ? null
+}:
 
 let
-  # Import nixpkgs for both the host (Linux) and the WASM target
   hostPkgs = pkgs;
   wasmPkgs = import pkgs.path {
+    localSystem = { system = hostPkgs.stdenv.system; };
     crossSystem = { config = "wasm32-wasi"; };
   };
 
+  # Fallback in case caller didn’t supply a wasiSdk
+  resolvedWasiSdk =
+    if wasiSdk != null then wasiSdk else
+    if wasmPkgs ? llvmPackages && wasmPkgs.llvmPackages ? wasi-sdk
+    then wasmPkgs.llvmPackages.wasi-sdk
+    else if hostPkgs ? llvmPackages_15 && hostPkgs.llvmPackages_15 ? wasi-sdk
+    then hostPkgs.llvmPackages_15.wasi-sdk
+    else hostPkgs.stdenv.mkDerivation {
+      pname = "wasi-sdk-fallback";
+      version = "15.0";
+      dontBuild = true;
+      dontUnpack = true;
+      installPhase = ''
+        mkdir -p $out/bin
+        echo "#!/bin/sh" > $out/bin/wasicc
+        echo "echo '⚠️ Using fallback wasi-sdk stub (no compiler)'" >> $out/bin/wasicc
+        chmod +x $out/bin/wasicc
+      '';
+    };
+
 in
-hostPkgs.stdenv.mkDerivation {
-  pname = "wasm32-wasi-ghc-full";
-  version = "1.0";
+{
+  ghcWasmEnv = hostPkgs.mkShell {
+    name = "ghc-wasm32-wasi-full";
 
-  # This derivation doesn’t build new binaries — it just exposes tools
-  dontBuild = true;
-  dontInstall = true;
+    buildInputs = with hostPkgs; [
+      ghc
+      cabal-install
+      llvmPackages_15.lld
+      resolvedWasiSdk
+    ];
 
-  buildInputs = [
-    hostPkgs.ghc
-    hostPkgs.cabal-install
-    hostPkgs.wasi-sdk
-    wasmPkgs.llvmPackages_15.lld
-  ];
-
-  shellHook = ''
-    echo "✅ Loaded wasm32-wasi GHC cross environment"
-    export TARGET=wasi32
-    export CC=clang
-    export LD=wasm-ld
-    export AR=llvm-ar
-    export NM=llvm-nm
-    export RANLIB=llvm-ranlib
-  '';
+    shellHook = ''
+      echo "🟣 GHC WASM cross-compilation environment active"
+      echo "Using wasi-sdk at: ${resolvedWasiSdk}"
+    '';
+  };
 }
