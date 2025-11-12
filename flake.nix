@@ -22,8 +22,8 @@
         };
 
         # Import your WASM GHC + WASI SDK 28 toolchain
-        wasmGhcSet = import ./pkgs/wasm32-wasi-ghc-full.nix { inherit pkgs; };
-        wasmGhc = wasmGhcSet.ghcWasmEnv;
+        wasmGhc = import ./pkgs/wasm32-wasi-ghc-full.nix { inherit pkgs; };
+       # wasmGhc = wasmGhcSet.ghcWasmEnv;
       in {
         packages.default = wasmGhc;
 
