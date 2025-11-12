@@ -7,14 +7,14 @@ let
   wasi-sdk = pkgs.stdenv.mkDerivation {
     name = "wasi-sdk-${version}";
     src = pkgs.fetchurl {
-      url = "https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-${version}/wasi-sdk-${version}.0-x86_64-linux.tar.gz";
+      url = "https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-28/wasi-sdk-${version}-x86_64-linux.tar.gz";
       sha256 = sha256;
     };
     nativeBuildInputs = [ pkgs.autoPatchelfHook pkgs.gcc ];
     unpackPhase = "tar xzf $src";
     installPhase = ''
       mkdir -p $out
-      cp -r wasi-sdk-${version}.0/* $out/
+      cp -r wasi-sdk-${version}/* $out/
     '';
   };
 
