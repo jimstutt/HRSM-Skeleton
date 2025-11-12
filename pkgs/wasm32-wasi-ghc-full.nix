@@ -1,11 +1,11 @@
 # pkgs/wasm32-wasi-ghc-full.nix
-# Provides a GHC + WASI SDK 28.0 environment for compiling Haskell to WebAssembly
-
+# Pure WASI SDK 28.0 + GHC WASM environment for nix develop
 { pkgs }:
 
 let
-  inherit (pkgs) stdenv fetchurl llvmPackages lib;
+  inherit (pkgs) stdenv fetchurl llvmPackages;
 
+  # Download and unpack prebuilt WASI SDK 28.0
   wasiSdk = stdenv.mkDerivation rec {
     pname = "wasi-sdk";
     version = "28.0";
@@ -15,24 +15,36 @@ let
       sha256 = "0p93lf8qkwww9k4fn7qisjshvyf9fbipmr1avmrzxzkapxhwcpf4";
     };
 
-    nativeBuildInputs = [ pkgs.autoPatchelfHook ];
-    dontConfigure = true;
+    dontUnpack = true;
     dontBuild = true;
+    dontPatchELF = true;
+    dontFixup = true;
+    dontStrip = true;
 
     installPhase = ''
       mkdir -p $out
       tar -xzf $src --strip-components=1 -C $out
     '';
+
+    meta = {
+      description = "Prebuilt WASI SDK 28.0 for WebAssembly (no patching)";
+      homepage = "https://github.com/WebAssembly/wasi-sdk";
+      platforms = [ "x86_64-linux" ];
+    };
   };
 
+  # Build GHC WASM environment
   ghcWasmEnv = stdenv.mkDerivation {
     pname = "ghc-wasm32-wasi-env";
     version = "9.10.1";
 
+    # Only tool dependencies, no building
+    dontUnpack = true;
+    dontBuild = true;
+
     nativeBuildInputs = with pkgs; [
       llvmPackages.clang
       llvmPackages.lld
-      wasiSdk
       binaryen
       wabt
       cabal-install
@@ -40,8 +52,7 @@ let
 
     installPhase = ''
       mkdir -p $out/bin
-      # Export environment wrapper script
-      cat > $out/bin/ghc-wasm-env <<'EOF'
+      cat > $out/bin/wasm-env <<'EOF'
       #!/usr/bin/env bash
       export WASI_SDK_PATH=${wasiSdk}
       export PATH="$WASI_SDK_PATH/bin:$PATH"
@@ -53,11 +64,13 @@ let
       export RANLIB=llvm-ranlib
       export CFLAGS="--target=wasm32-wasi --sysroot=$WASI_SDK_PATH/share/wasi-sysroot"
       export LDFLAGS="$CFLAGS"
-      echo "✅ WASI SDK 28.0 (GHC WASM Env) is ready."
+      echo "✅ GHC WASM Environment using WASI SDK 28.0 ready."
       bash
       EOF
-      chmod +x $out/bin/ghc-wasm-env
+      chmod +x $out/bin/wasm-env
     '';
+
+    meta.description = "GHC WASM32-WASI environment using prebuilt WASI SDK 28.0";
   };
 
 in
