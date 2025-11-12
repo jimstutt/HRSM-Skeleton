@@ -1,51 +1,68 @@
 {
-  description = "NGO Logistics — WebAssembly GHC Development Environment (WASI SDK 28.0)";
+  description = "NGO Logistics – Haskell Servant backend with WASM build and TypeScript frontend";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";
+    flake-utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = { self, nixpkgs }:
-    let
-      system = "x86_64-linux";
-      pkgs = import nixpkgs { inherit system; };
+  outputs = { self, nixpkgs, flake-utils, ... }:
+    flake-utils.lib.eachDefaultSystem (system:
+      let
+        pkgs = import nixpkgs {
+          inherit system;
+        };
 
-      # Import our custom WASM toolchain
-      ghcWasmEnv = import ./pkgs/wasm32-wasi-ghc-full.nix { inherit pkgs; };
-    in {
-      # ✅ Development shell (interactive)
-      devShells.${system}.default = pkgs.mkShell {
-        name = "ngologisticscg-dev";
+        # Import WASM toolchain (ghc-wasm32-wasi + wasi-sdk 28)
+        ghcWasmEnv = import ./pkgs/wasm32-wasi-ghc-full.nix {
+          inherit pkgs;
+        };
+      in {
+        # Package outputs (for building)
+        packages = {
+          default = pkgs.stdenv.mkDerivation {
+            name = "ngologistics-backend";
+            src = ./.;
 
-        buildInputs = [
-          ghcWasmEnv
-          pkgs.git
-          pkgs.cabal-install
-          pkgs.nodejs_20
-          pkgs.typescript
-          pkgs.python3
-        ];
+            buildInputs = [
+              pkgs.haskellPackages.ghc
+              pkgs.haskellPackages.cabal-install
+            ];
 
-        shellHook = ''
-          echo
-          echo "---------------------------------------------"
-          echo "✅ NGO Logistics development environment"
-          echo "Using WASI SDK 28.0 + GHC WebAssembly toolchain"
-          echo "---------------------------------------------"
-          echo
-        '';
-      };
+            buildPhase = ''
+              echo "Building NGO Logistics Haskell backend..."
+              cabal build all
+            '';
 
-      # ✅ Expose as a package for CI or reuse in other flakes
-      packages.${system}.ghc-wasm-env = ghcWasmEnv;
+            installPhase = ''
+              mkdir -p $out/bin
+              cp -r dist-newstyle/build/*/*/ngologisticscg-*/x/ngologisticscg/build/ngologisticscg/ngologisticscg $out/bin/
+            '';
+          };
+        };
 
-      # Default package alias for convenience
-      defaultPackage.${system} = self.packages.${system}.ghc-wasm-env;
+        # Development shell with both host & wasm compilers
+        devShells.default = pkgs.mkShell {
+          name = "ngologisticscg-dev";
+          buildInputs = [
+            pkgs.git
+            pkgs.nodejs
+            pkgs.haskellPackages.ghc
+            pkgs.haskellPackages.cabal-install
+            pkgs.haskellPackages.hls
+            pkgs.haskellPackages.ormolu
+            pkgs.typescript
+            pkgs.esbuild
+            ghcWasmEnv
+          ];
 
-      # Optionally provide an app entrypoint (if you want nix run)
-      apps.${system}.wasm = {
-        type = "app";
-        program = "${ghcWasmEnv}/bin/ghc";
-      };
-    };
+          shellHook = ''
+            echo "✅ NGO Logistics development environment ready"
+            echo "Available commands:"
+            echo "  cabal build        – build backend"
+            echo "  ./scripts/build-wasm.sh – compile frontend (wasm)"
+            echo "  ./scripts/serve-wasm.sh – run TypeScript+Servant dev server"
+          '';
+        };
+      });
 }
