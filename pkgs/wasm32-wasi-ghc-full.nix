@@ -14,7 +14,8 @@ let
     unpackPhase = "tar xzf $src";
     installPhase = ''
       mkdir -p $out
-      cp -r wasi-sdk-${version}/* $out/
+      cd wasi-sdk-${version}
+      cp -r * $out/
     '';
   };
 
@@ -36,3 +37,4 @@ let
 in {
   inherit ghcWasmEnv wasi-sdk;
 }
+
