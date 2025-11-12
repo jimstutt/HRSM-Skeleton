@@ -1,10 +1,10 @@
 { pkgs }:
 
 let
-  # Prebuilt WASI SDK (clang + libc)
+  # Corrected URL for prebuilt WASI SDK (24.0)
   wasiSdk = pkgs.fetchurl {
-    url = "https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-24.0/wasi-sdk-24.0-linux.tar.gz";
-    hash = "sha256-jPV2H7CfbXbD4uWcWMEJX1uWRKXABW0J7cBtFG7hZtA=";
+    url = "https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-24.0/wasi-sdk-24.0-manylinux2014.tar.gz";
+    hash = "sha256-PFrYbBlylpoE+SmnNPP9bYy02svLb7Ekt1dyGYvRR1c=";
   };
 
   wasiEnv = pkgs.stdenv.mkDerivation {
