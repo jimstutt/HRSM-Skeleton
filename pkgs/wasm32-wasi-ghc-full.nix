@@ -2,45 +2,34 @@
 { pkgs }:
 
 let
-  # Define host system and cross target
-  hostSystem = pkgs.stdenv.system;
-  wasmSystem = "wasm32-wasi";
-
-  # Import nixpkgs for WASM cross system
-  wasmPkgs = import pkgs.path {
-    system = hostSystem;
-    crossSystem = {
-      config = wasmSystem;
-    };
+    # Prebuilt WASI SDK from wasmtime
+  wasiSdk = pkgs.fetchurl {
+    url = "https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-24.0/wasi-sdk-24.0-linux.tar.gz";
+    hash = "sha256-jPV2H7CfbXbD4uWcWMEJX1uWRKXABW0J7cBtFG7hZtA="; # Replace with updated hash if needed
   };
 
-  # Use a fallback wasi-sdk if missing
-  wasiSdk = if wasmPkgs ? wasi-sdk then wasmPkgs.wasi-sdk else
-    wasmPkgs.stdenv.mkDerivation {
-      pname = "dummy-wasi-sdk";
-      version = "0.0.1";
-      dontUnpack = true;
-      installPhase = ''
-        mkdir -p $out
-        echo "⚠️ dummy wasi-sdk placeholder" > $out/README.txt
-      '';
-    };
+  wasiEnv = pkgs.stdenv.mkDerivation {
+    name = "wasm32-wasi-env";
+    unpackPhase = "true";
+    installPhase = ''
+      mkdir -p $out
+      tar -xzf ${wasiSdk} -C $out --strip-components=1
+    '';
+  };
+
 
 in pkgs.mkShell {
   name = "ghc-wasm32-wasi-full";
 
   buildInputs = [
-    pkgs.gnumake
-    pkgs.gcc
+    pkgs.ghc
     pkgs.cabal-install
     pkgs.llvmPackages_15.lld
-    wasiSdk
+    wasiEnv
   ];
 
   shellHook = ''
-    echo "🧩 Entered WASM GHC environment"
-    echo "Host system: ${hostSystem}"
-    echo "Cross system: ${wasmSystem}"
-    echo "WASI SDK path: ${wasiSdk}"
+    export WASI_SDK_PATH=${wasiEnv}
+    echo "✅ Using prebuilt WASI SDK: $WASI_SDK_PATH"
   '';
 }

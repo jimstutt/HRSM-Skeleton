@@ -12,8 +12,7 @@
         pkgs = import nixpkgs { inherit system; };
 
         # Import the WASM GHC environment
-        wasmGhcSet = import ./pkgs/wasm32-wasi-ghc-full.nix { inherit pkgs; };
-        wasmGhc = wasmGhcSet.ghcWasmEnv;
+        wasmGhc = import ./pkgs/wasm32-wasi-ghc-full.nix { inherit pkgs; };
       in
       {
         packages.default = pkgs.haskellPackages.callCabal2nix "NGOLogisticsCG"
