@@ -1,5 +1,5 @@
 {
-  description = "NGOLogisticsCG full-stack Haskell + WASM project";
+  description = "NGO Logistics Haskell + WASM project";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";
@@ -7,17 +7,15 @@
   };
 
   outputs = { self, nixpkgs, flake-utils }:
-    flake-utils.lib.eachDefaultSystem (system:
+    flake-utils.lib.eachSystem [ "x86_64-linux" ] (system:
       let
-        pkgs = import nixpkgs { inherit system; };
+        pkgs = import nixpkgs {
+          inherit system;
+        };
 
-        # Import the WASM GHC environment
-        wasmGhc = import ./pkgs/wasm32-wasi-ghc-full.nix { inherit pkgs; };
-      in
-      {
-        packages.default = pkgs.haskellPackages.callCabal2nix "NGOLogisticsCG"
-          ./logistics-server {};
-
+        # Import our prebuilt WASM toolchain environment
+        wasmGhcEnv = import ./pkgs/wasm32-wasi-ghc-full.nix { inherit pkgs; };
+      in {
         devShells.default = pkgs.mkShell {
           name = "ngologisticscg-dev";
 
@@ -25,16 +23,13 @@
             git
             cabal-install
             ghc
-            llvmPackages_15.lld
             nodejs
-            python3
-            wasmGhc # <- this is a mkShell, so we use its inputs below
-          ] ++ wasmGhc.buildInputs or [];
+            wasmGhcEnv
+          ];
 
           shellHook = ''
-            echo "🧩 Entered NGOLogisticsCG development shell"
-            echo "Cabal config: $PWD/cabal.project"
-            echo "Using GHC: $(ghc --version || true)"
+            echo "✅ NGO Logistics development environment"
+            echo "WASI SDK: $WASI_SDK_PATH"
           '';
         };
       });
