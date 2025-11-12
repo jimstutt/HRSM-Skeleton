@@ -40,3 +40,32 @@ pkgs.stdenv.mkDerivation rec {
     binaryen
     nodejs
     wasmtime
+    wabt
+  ];
+
+  # Include the prebuilt WASI SDK paths
+  nativeBuildInputs = [
+    prebuiltWasiSdk
+  ];
+
+  # Set up environment variables
+  shellHook = ''
+    export WASI_SDK_PATH=${prebuiltWasiSdk}
+    export PATH=$WASI_SDK_PATH/bin:$PATH
+    export CC=clang
+    export CXX=clang++
+    export LD=wasm-ld
+    export AR=llvm-ar
+    export NM=llvm-nm
+    export RANLIB=llvm-ranlib
+    export CFLAGS="--target=wasm32-wasi --sysroot=$WASI_SDK_PATH/share/wasi-sysroot"
+    export LDFLAGS="--target=wasm32-wasi --sysroot=$WASI_SDK_PATH/share/wasi-sysroot"
+    echo "✅ WASI SDK environment (v28.0) ready for wasm32-wasi builds."
+  '';
+
+  # Prevent actual building
+  dontUnpack = true;
+  dontConfigure = true;
+  dontBuild = true;
+  dontInstall = true;
+}
