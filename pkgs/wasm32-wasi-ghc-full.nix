@@ -1,36 +1,42 @@
-{ pkgs }:
+{ pkgs ? import <nixpkgs> { } }:
 
 let
-  # Corrected URL for prebuilt WASI SDK (24.0)
-  wasiSdk = pkgs.fetchurl {
-    url = "https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-24.0/wasi-sdk-24.0-manylinux2014.tar.gz";
-    hash = "sha256-PFrYbBlylpoE+SmnNPP9bYy02svLb7Ekt1dyGYvRR1c=";
-  };
+  # Fetch prebuilt WASI SDK 28.0
+  prebuiltWasiSdk = pkgs.stdenv.mkDerivation {
+    pname = "wasi-sdk";
+    version = "28.0";
 
-  wasiEnv = pkgs.stdenv.mkDerivation {
-    name = "prebuilt-wasi-sdk";
-    unpackPhase = "true";
+    src = pkgs.fetchurl {
+      url = "https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-28/wasi-sdk-28.0-x86_64-linux.tar.gz";
+      sha256 = "0p93lf8qkwww9k4fn7qisjshvyf9fbipmr1avmrzxzkapxhwcpf4";
+    };
+
+    dontConfigure = true;
+    dontBuild = true;
     installPhase = ''
       mkdir -p $out
-      tar -xzf ${wasiSdk} -C $out --strip-components=1
+      tar -xzf $src --strip-components=1 -C $out
     '';
   };
 
-in
-pkgs.mkShell {
-  name = "ghc-wasm32-wasi-env";
+  # Define the wasm32-wasi target environment
+  wasmPkgs = import pkgs.path {
+    system = "x86_64-linux"; # Host system for the toolchain
+    crossSystem = {
+      config = "wasm32-wasi";
+    };
+  };
 
+in
+pkgs.stdenv.mkDerivation rec {
+  pname = "ghc-wasm32-wasi-env";
+  version = "9.10.1";
+
+  # Provide development environment for GHC targeting wasm32-wasi
   buildInputs = with pkgs; [
     ghc
     cabal-install
     llvmPackages_15.lld
-    llvmPackages_15.clang
-    wasiEnv
-  ];
-
-  shellHook = ''
-    export WASI_SDK_PATH=${wasiEnv}
-    export PATH=$WASI_SDK_PATH/bin:$PATH
-    echo "✅ Using prebuilt WASI SDK from: $WASI_SDK_PATH"
-  '';
-}
+    binaryen
+    nodejs
+    wasmtime
