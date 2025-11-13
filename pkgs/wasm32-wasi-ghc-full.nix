@@ -69,7 +69,7 @@ let
     meta = with lib; {
       description = "GHC ${version} environment for compiling Haskell to WebAssembly (WASI)";
       homepage = "https://gitlab.haskell.org/ghc/ghc";
-      license = license.ncsa;
+      licenses = license.ncsa;
       platforms = [ "x86_64-linux" ];
       maintainers = [ maintainers.eelco ];
     };
