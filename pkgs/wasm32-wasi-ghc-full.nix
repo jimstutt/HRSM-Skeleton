@@ -28,7 +28,7 @@ let
     meta = with lib; {
       description = "WASI SDK ${version} — Clang/LLVM toolchain targeting WebAssembly System Interface (WASI)";
       homepage = "https://github.com/WebAssembly/wasi-sdk";
-      license = licenses.ncsa; # LLVM-style
+ #     license = licenses.ncsa; # LLVM-style
       platforms = [ "x86_64-linux" ];
       maintainers = [ maintainers.eelco ];
     };
@@ -69,7 +69,7 @@ let
     meta = with lib; {
       description = "GHC ${version} environment for compiling Haskell to WebAssembly (WASI)";
       homepage = "https://gitlab.haskell.org/ghc/ghc";
-      license = licenses.ncsa;
+ #     license = licenses.ncsa;
       platforms = [ "x86_64-linux" ];
       maintainers = [ maintainers.eelco ];
     };
