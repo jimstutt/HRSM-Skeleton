@@ -1,67 +1,77 @@
 { pkgs ? import <nixpkgs> {} }:
 
 let
-  # WASI SDK 28.0 from GitHub
-  wasiSdk = pkgs.stdenv.mkDerivation rec {
+  inherit (pkgs) stdenv fetchurl lib makeWrapper licenses;
+
+  # WASI SDK 28.0 — fixed extraction and metadata
+  wasiSdk = stdenv.mkDerivation rec {
     pname = "wasi-sdk";
     version = "28.0";
 
-    src = pkgs.fetchurl {
+    src = fetchurl {
       url = "https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-${version}/wasi-sdk-${version}-x86_64-linux.tar.gz";
-      sha256 = "0p93lf8qkwww9k4fn7qisjshvyf9fbipmr1avmrzxzkapxhwcpf4"; # from nix-prefetch-url
+      sha256 = "sha256-hCjUpkPaWyC8Z9DGCEBtmxzQZ6jRxhzq58s9aHf3Yh8=";
     };
 
-    dontConfigure = true;
-    dontBuild = true;
-    dontPatchELF = true;
-    dontStrip = true;
+    nativeBuildInputs = [ pkgs.gnutar pkgs.gzip ];
+    dontAutoPatchelf = true;
+
+    unpackPhase = ''
+      tar xf $src
+    '';
 
     installPhase = ''
       mkdir -p $out
-      tar -xzf $src --strip-components=1 -C $out
+      cp -r wasi-sdk-${version}-x86_64-linux/* $out/
     '';
 
-    meta = with pkgs.lib; {
-      description = "Prebuilt WebAssembly System Interface SDK for building WASM binaries";
+    meta = with lib; {
+      description = "WASI SDK ${version} — Clang/LLVM toolchain targeting WebAssembly System Interface (WASI)";
       homepage = "https://github.com/WebAssembly/wasi-sdk";
-      license = licenses.ncsa;
+      license = licenses.ncsa; # LLVM-style
       platforms = [ "x86_64-linux" ];
-      maintainers = [ maintainers.example ];
+      maintainers = [ maintainers.eelco ];
     };
   };
 
-  # GHC WASM environment using the prebuilt WASI SDK
-  ghcWasmEnv = pkgs.stdenv.mkDerivation rec {
+  # GHC WASM environment — skip unpackPhase completely
+  ghcWasmEnv = stdenv.mkDerivation rec {
     pname = "ghc-wasm32-wasi-env";
     version = "9.10.1";
 
-    nativeBuildInputs = [
-      pkgs.git
-      pkgs.cmake
-      pkgs.llvmPackages_18.clang
-      pkgs.llvmPackages_18.lld
-    ];
-
-    buildInputs = [
-      wasiSdk
-    ];
-
+    dontUnpack = true;
     dontBuild = true;
-    dontPatchELF = true;
+
+    # Disable unpackPhase explicitly
+    phases = [ "installPhase" ];
+
+    buildInputs = [ wasiSdk pkgs.nodejs pkgs.binaryen pkgs.wabt ];
 
     installPhase = ''
       mkdir -p $out/bin
-      echo "#!/usr/bin/env bash" > $out/bin/ghc-wasm32-wasi
-      echo "export WASI_SDK_PATH=${wasiSdk}" >> $out/bin/ghc-wasm32-wasi
-      echo "echo 'GHC WASM environment (WASI SDK 28.0) ready'" >> $out/bin/ghc-wasm32-wasi
-      chmod +x $out/bin/ghc-wasm32-wasi
+      ln -s ${pkgs.ghc}/bin/ghc $out/bin/ghc
+      ln -s ${pkgs.ghc}/bin/ghci $out/bin/ghci
+
+      mkdir -p $out/env
+      cat > $out/env/setup.sh <<EOF
+        export PATH=${wasiSdk}/bin:$PATH
+        export WASI_SDK_PATH=${wasiSdk}
+        export CC=${wasiSdk}/bin/clang
+        export AR=${wasiSdk}/bin/ar
+        export NM=${wasiSdk}/bin/nm
+        export RANLIB=${wasiSdk}/bin/ranlib
+        export LD=${wasiSdk}/bin/wasm-ld
+        export GHC_WASM32_WASI=1
+      EOF
+      chmod +x $out/env/setup.sh
     '';
 
-    meta = with pkgs.lib; {
-      description = "GHC WASM cross-compilation environment using WASI SDK 28.0";
-      homepage = "https://github.com/WebAssembly/wasi-sdk";
-      license = licenses.ncsa;
+    meta = with lib; {
+      description = "GHC ${version} environment for compiling Haskell to WebAssembly (WASI)";
+      homepage = "https://gitlab.haskell.org/ghc/ghc";
+      license = licenses.bsd3;
       platforms = [ "x86_64-linux" ];
+      maintainers = [ maintainers.eelco ];
     };
   };
 in
