@@ -1,50 +1,68 @@
 { pkgs ? import <nixpkgs> {} }:
 
 let
-  wasiSdkVersion = "28.0";
-  wasiSdkHash = "0p93lf8qkwww9k4fn7qisjshvyf9fbipmr1avmrzxzkapxhwcpf4"; # verified from previous build
-  srcUrl = "https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-${wasiSdkVersion}/wasi-sdk-${wasiSdkVersion}-x86_64-linux.tar.gz";
-
+  # WASI SDK 28.0 from GitHub
   wasiSdk = pkgs.stdenv.mkDerivation rec {
     pname = "wasi-sdk";
-    version = wasiSdkVersion;
+    version = "28.0";
+
     src = pkgs.fetchurl {
-      url = srcUrl;
-      sha256 = wasiSdkHash;
+      url = "https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-${version}/wasi-sdk-${version}-x86_64-linux.tar.gz";
+      sha256 = "0p93lf8qkwww9k4fn7qisjshvyf9fbipmr1avmrzxzkapxhwcpf4"; # from nix-prefetch-url
     };
 
+    dontConfigure = true;
+    dontBuild = true;
     dontPatchELF = true;
-    dontAutoPatchelf = true;
     dontStrip = true;
-
-    nativeBuildInputs = [ pkgs.gnutar pkgs.gzip ];
-
-    unpackPhase = ''
-      tar xf $src
-    '';
 
     installPhase = ''
       mkdir -p $out
-      cp -r wasi-sdk-${version}-x86_64-linux/* $out/
+      tar -xzf $src --strip-components=1 -C $out
     '';
 
     meta = with pkgs.lib; {
-      description = "WASI SDK ${version} (toolchain for WebAssembly System Interface)";
+      description = "Prebuilt WebAssembly System Interface SDK for building WASM binaries";
+      homepage = "https://github.com/WebAssembly/wasi-sdk";
+      license = licenses.ncsa;
+      platforms = [ "x86_64-linux" ];
+      maintainers = [ maintainers.example ];
+    };
+  };
+
+  # GHC WASM environment using the prebuilt WASI SDK
+  ghcWasmEnv = pkgs.stdenv.mkDerivation rec {
+    pname = "ghc-wasm32-wasi-env";
+    version = "9.10.1";
+
+    nativeBuildInputs = [
+      pkgs.git
+      pkgs.cmake
+      pkgs.llvmPackages_18.clang
+      pkgs.llvmPackages_18.lld
+    ];
+
+    buildInputs = [
+      wasiSdk
+    ];
+
+    dontBuild = true;
+    dontPatchELF = true;
+
+    installPhase = ''
+      mkdir -p $out/bin
+      echo "#!/usr/bin/env bash" > $out/bin/ghc-wasm32-wasi
+      echo "export WASI_SDK_PATH=${wasiSdk}" >> $out/bin/ghc-wasm32-wasi
+      echo "echo 'GHC WASM environment (WASI SDK 28.0) ready'" >> $out/bin/ghc-wasm32-wasi
+      chmod +x $out/bin/ghc-wasm32-wasi
+    '';
+
+    meta = with pkgs.lib; {
+      description = "GHC WASM cross-compilation environment using WASI SDK 28.0";
       homepage = "https://github.com/WebAssembly/wasi-sdk";
       license = licenses.ncsa;
       platforms = [ "x86_64-linux" ];
     };
-  };
-
-  # Define a GHC wasm32-wasi environment built with that SDK
-  ghcWasmEnv = pkgs.mkShell {
-    name = "ghc-wasm32-wasi-env";
-    buildInputs = [ wasiSdk pkgs.ghc pkgs.cabal-install pkgs.wasm-tools ];
-    shellHook = ''
-      export WASI_SDK_PATH=${wasiSdk}
-      export PATH=$WASI_SDK_PATH/bin:$PATH
-      echo "✅ GHC WASM environment ready (WASI SDK ${wasiSdkVersion})"
-    '';
   };
 in
 {
