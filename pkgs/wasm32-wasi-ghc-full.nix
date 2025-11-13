@@ -1,39 +1,39 @@
-{ pkgs }:
+{ pkgs ? import <nixpkgs> {} }:
 
 let
-  version = "28.0";
-  sha256 = "0p93lf8qkwww9k4fn7qisjshvyf9fbipmr1avmrzxzkapxhwcpf4";
+  wasiSdkVersion = "28.0";
+  wasiSdkHash = "0p93lf8qkwww9k4fn7qisjshvyf9fbipmr1avmrzxzkapxhwcpf4"; # from your nix-prefetch-url
+  srcUrl = "https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-${wasiSdkVersion}/wasi-sdk-${wasiSdkVersion}-x86_64-linux.tar.gz";
+in
+pkgs.stdenv.mkDerivation rec {
+  pname = "wasi-sdk";
+  version = wasiSdkVersion;
 
-  wasi-sdk = pkgs.stdenv.mkDerivation {
-    name = "wasi-sdk-${version}";
-    src = pkgs.fetchurl {
-      url = "https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-28/wasi-sdk-${version}-x86_64-linux.tar.gz";
-      sha256 = sha256;
-    };
-    nativeBuildInputs = [ pkgs.autoPatchelfHook pkgs.gcc ];
-    unpackPhase = "tar xzf $src";
-    installPhase = ''
-      mkdir -p $out
-      cd wasi-sdk-${version}-x86_64-linux
-      cp -r * $out/
-    '';
+  src = pkgs.fetchurl {
+    url = srcUrl;
+    sha256 = wasiSdkHash;
   };
 
-  ghcWasmEnv = pkgs.stdenv.mkDerivation {
-    name = "ghc-wasm32-wasi-env-9.10.1";
-    nativeBuildInputs = [
-      pkgs.gcc
-      pkgs.llvmPackages_15.lld
-      pkgs.cabal-install
-      wasi-sdk
-    ];
-    buildCommand = ''
-      mkdir -p $out/bin
-      echo "#!/usr/bin/env bash" > $out/bin/ghc-wasm
-      echo "echo 'ghc-wasm (WASI SDK ${version}) environment active'" >> $out/bin/ghc-wasm
-      chmod +x $out/bin/ghc-wasm
-    '';
+  # Prevent Nix from trying to patchelf WASI executables
+  dontPatchELF = true;
+  dontAutoPatchelf = true;
+  dontStrip = true;
+
+  nativeBuildInputs = [ pkgs.gnutar pkgs.gzip ];
+
+  unpackPhase = ''
+    tar xf $src
+  '';
+
+  installPhase = ''
+    mkdir -p $out
+    cp -r wasi-sdk-${version}-x86_64-linux/* $out/
+  '';
+
+  meta = with pkgs.lib; {
+    description = "WASI SDK ${version} (toolchain for WebAssembly System Interface)";
+    homepage = "https://github.com/WebAssembly/wasi-sdk";
+    license = licenses.llvm;
+    platforms = [ "x86_64-linux" ];
   };
-in {
-  inherit ghcWasmEnv wasi-sdk;
 }
