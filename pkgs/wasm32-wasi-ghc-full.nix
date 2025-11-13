@@ -31,7 +31,7 @@ let
     meta = with pkgs.lib; {
       description = "WASI SDK ${version} (toolchain for WebAssembly System Interface)";
       homepage = "https://github.com/WebAssembly/wasi-sdk";
-      license = licenses.llvm;
+      license = licenses.ncsa;
       platforms = [ "x86_64-linux" ];
     };
   };
