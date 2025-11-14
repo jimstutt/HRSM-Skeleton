@@ -12,11 +12,9 @@
         pkgs = import nixpkgs { inherit system; };
 
         # Import full WASM GHC + WASI SDK set
-        wasmGhcSet = import ./pkgs/wasm32-wasi-ghc-full.nix {
+        wasmGhc = import ./pkgs/wasm32-wasi-ghc-full.nix {
           inherit pkgs;
         };
-
-        wasmGhc = wasmGhcSet.ghcWasmEnv;
       in
       {
 
