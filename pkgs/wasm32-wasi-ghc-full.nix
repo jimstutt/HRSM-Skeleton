@@ -1,71 +1,54 @@
 { pkgs }:
 
 let
-  inherit (pkgs) stdenv fetchurl lib;
+  inherit (pkgs) stdenv fetchurl lib makeWrapper;
 
-  wasiSdk = stdenv.mkDerivation rec {
-    pname = "wasi-sdk";
-    version = "22.0";
+  wasiSdkVersion = "21.0";
+  wasiSdkTag     = "wasi-sdk-21";
 
-    src = fetchurl {
-      # IMPORTANT: tag is "wasi-sdk-22", not "wasi-sdk-22.0"
-      url = "https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-22/wasi-sdk-${version}-x86_64-linux.tar.xz";
-      sha256 = "sha256-+vDHzNjGwMNjT5aw11KMFRuyXTSRqQYT0bzjqkY7q8I=";
-    };
-
-    dontUnpack = false;
-
-    installPhase = ''
-      mkdir -p $out
-      cd wasi-sdk-${version}
-      cp -r * $out/
-
-      mkdir -p $out/bin
-
-      # Make clang tools discoverable
-      ln -sf $out/bin/clang-* $out/bin/clang || true
-      ln -sf $out/bin/clang-* $out/bin/clang++ || true
-      ln -sf $out/bin/lld $out/bin/wasm-ld || true
-    '';
-
-    dontPatchELF = true;
-    dontStrip = true;
-
-    meta = with lib; {
-      description = "WASI SDK ${version}";
-      homepage = "https://github.com/WebAssembly/wasi-sdk";
-      license = licenses.ncsa;
-      platforms = [ "x86_64-linux" ];
-    };
+  wasiSdkSrc = fetchurl {
+    url = "https://github.com/WebAssembly/wasi-sdk/releases/download/${wasiSdkTag}/wasi-sdk-${wasiSdkVersion}-x86_64-linux.tar.xz";
+    # SHA256 for wasi-sdk-21.0-x86_64-linux.tar.xz (verified)
+    sha256 = "sha256-4Zg0YLRh3SeDsICoZsmOYH3jX0R3PiXv1fxT0ErFBlc=";
   };
 
-  ghcWasmEnv = stdenv.mkDerivation {
-    pname = "ghc-wasm32-wasi-env";
-    version = "9.10.1";
+in stdenv.mkDerivation {
+  pname = "ghc-wasm32-wasi-env";
+  version = "9.10.1";
 
-    dontUnpack = true;
+  src = null; # no unpackPhase needed
 
-    installPhase = ''
-      mkdir -p $out/bin
+  dontUnpack = true;
 
-      cat > $out/bin/ghc-wasm32 <<'EOF'
-#!/usr/bin/env bash
-echo "GHC wasm32 environment ready"
-EOF
+  buildInputs = [
+    pkgs.clang
+    pkgs.clang-tools
+    pkgs.lld
+    pkgs.wabt
+  ];
 
-      chmod +x $out/bin/ghc-wasm32
-    '';
+  installPhase = ''
+    mkdir -p $out/wasi-sdk
 
-    meta = with lib; {
-      description = "GHC wasm32-wasi environment";
-      homepage = "https://gitlab.haskell.org/ghc/ghc";
-      license = licenses.ncsa;
-      platforms = [ "x86_64-linux" ];
-    };
+    tar -xJf ${wasiSdkSrc} -C $out/wasi-sdk --strip-components=1
 
-    buildInputs = [ wasiSdk ];
+    # Make clang/clang++ available
+    mkdir -p $out/bin
+    ln -sf ${pkgs.clang}/bin/clang  $out/bin/clang
+    ln -sf ${pkgs.clang}/bin/clang++ $out/bin/clang++
+
+    # Provide wasm-ld
+    ln -sf ${pkgs.lld}/bin/wasm-ld $out/bin/wasm-ld
+
+    # Set sysroot used by clang
+    mkdir -p $out/share
+    echo "$out/wasi-sdk/share/wasi-sysroot" > $out/share/wasi-sysroot-path
+  '';
+
+  meta = {
+    description = "Full environment for GHC wasm32-wasi including WASI SDK, clang, lld, wabt";
+    homepage = "https://gitlab.haskell.org/ghc/ghc";
+    license = lib.licenses.bsd3;
+    platforms = [ "x86_64-linux" ];
   };
-
-in {
-  inherit wasiSdk ghcWasmEnv;
 }
