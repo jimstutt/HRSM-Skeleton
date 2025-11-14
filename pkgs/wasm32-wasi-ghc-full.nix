@@ -1,13 +1,12 @@
 { pkgs }:
 
 let
-  wasiSdkVersion = "20.0";
-  wasiSdkTag     = "wasi-sdk-20";
+  wasiSdkVersion = "21.0";
+  wasiSdkTag     = "wasi-sdk-21";
 
-  # GitHub blocks fetchurl with no user-agent; fetchTarball works.
   wasiSdkSrc = builtins.fetchTarball {
     url = "https://github.com/WebAssembly/wasi-sdk/releases/download/${wasiSdkTag}/wasi-sdk-${wasiSdkVersion}-x86_64-linux.tar.xz";
-    sha256 = "0c4z9m8gjj3qz8xfp7k9q5swl3l3vs0i0q7k8q0k0m7l7cdbi6dx";
+    sha256 = "0mv5lj4x2cac1d4r4r8nb8c0lr4gvgprbvx0c2p056dhxs2h0f4h";
   };
 
 in pkgs.stdenv.mkDerivation {
@@ -35,4 +34,10 @@ in pkgs.stdenv.mkDerivation {
     mkdir -p $out/share
     echo "$out/wasi-sdk/share/wasi-sysroot" > $out/share/wasi-sysroot-path
   '';
+
+  meta = {
+    description = "Full environment for GHC wasm32-wasi including WASI SDK, clang, lld, wabt";
+    license = pkgs.lib.licenses.bsd3;
+    platforms = [ "x86_64-linux" ];
+  };
 }
