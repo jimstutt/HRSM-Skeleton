@@ -4,10 +4,10 @@ let
   wasiSdkVersion = "20.0";
   wasiSdkTag     = "wasi-sdk-20";
 
-  # Use fetchTarball because GitHub blocks fetchurl/curl without User-Agent
+  # GitHub blocks fetchurl with no user-agent; fetchTarball works.
   wasiSdkSrc = builtins.fetchTarball {
     url = "https://github.com/WebAssembly/wasi-sdk/releases/download/${wasiSdkTag}/wasi-sdk-${wasiSdkVersion}-x86_64-linux.tar.xz";
-    sha256 = "1v4n9i6r9snyrxck4rc9dicl7818apmhklg6f7w9qjidv3rj8ci";
+    sha256 = "0c4z9m8gjj3qz8xfp7k9q5swl3l3vs0i0q7k8q0k0m7l7cdbi6dx";
   };
 
 in pkgs.stdenv.mkDerivation {
@@ -28,12 +28,11 @@ in pkgs.stdenv.mkDerivation {
     tar -xf ${wasiSdkSrc} -C $out/wasi-sdk --strip-components=1
 
     mkdir -p $out/bin
-    ln -sf ${pkgs.clang}/bin/clang   $out/bin/clang
-    ln -sf ${pkgs.clang}/bin/clang++ $out/bin/clang++
-    ln -sf ${pkgs.lld}/bin/wasm-ld  $out/bin/wasm-ld
+    ln -sf ${pkgs.clang}/bin/clang    $out/bin/clang
+    ln -sf ${pkgs.clang}/bin/clang++  $out/bin/clang++
+    ln -sf ${pkgs.lld}/bin/wasm-ld    $out/bin/wasm-ld
 
     mkdir -p $out/share
     echo "$out/wasi-sdk/share/wasi-sysroot" > $out/share/wasi-sysroot-path
   '';
 }
-
