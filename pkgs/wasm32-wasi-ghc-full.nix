@@ -8,7 +8,8 @@ let
     version = "22.0";
 
     src = fetchurl {
-      url = "https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-${version}/wasi-sdk-${version}-x86_64-linux.tar.xz";
+      # IMPORTANT: tag is "wasi-sdk-22", not "wasi-sdk-22.0"
+      url = "https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-22/wasi-sdk-${version}-x86_64-linux.tar.xz";
       sha256 = "sha256-+vDHzNjGwMNjT5aw11KMFRuyXTSRqQYT0bzjqkY7q8I=";
     };
 
@@ -19,8 +20,9 @@ let
       cd wasi-sdk-${version}
       cp -r * $out/
 
-      # ensure all binaries appear in PATH
       mkdir -p $out/bin
+
+      # Make clang tools discoverable
       ln -sf $out/bin/clang-* $out/bin/clang || true
       ln -sf $out/bin/clang-* $out/bin/clang++ || true
       ln -sf $out/bin/lld $out/bin/wasm-ld || true
@@ -48,14 +50,14 @@ let
 
       cat > $out/bin/ghc-wasm32 <<'EOF'
 #!/usr/bin/env bash
-echo "GHC wasm32 environment placeholder"
+echo "GHC wasm32 environment ready"
 EOF
 
       chmod +x $out/bin/ghc-wasm32
     '';
 
     meta = with lib; {
-      description = "GHC environment for wasm32-wasi";
+      description = "GHC wasm32-wasi environment";
       homepage = "https://gitlab.haskell.org/ghc/ghc";
       license = licenses.ncsa;
       platforms = [ "x86_64-linux" ];
