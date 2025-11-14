@@ -6,7 +6,7 @@ let
 
   wasiSdkSrc = builtins.fetchTarball {
     url    = "https://github.com/WebAssembly/wasi-sdk/releases/download/${wasiSdkTag}/wasi-sdk-${wasiSdkVersion}-linux.tar.gz";
-    sha256 = "0mv5lj4x2cac1d4r4r8nb8c0lr4gvgprbvx0c2p056dhxs2h0f4h";
+    sha256 = "0fg46vwaj0yicmw080fydc0mzbkyzzy9ggcmg5ydk6qqynfkpy11";
   };
 
 in pkgs.stdenv.mkDerivation {
