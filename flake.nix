@@ -6,60 +6,69 @@
     flake-utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = { nixpkgs, flake-utils, ... }:
+  outputs = { self, nixpkgs, flake-utils, ... }:
     flake-utils.lib.eachDefaultSystem (system:
-      let
-        pkgs = import nixpkgs { inherit system; };  
-      in {
 
-        # -------------------------------
-        # Development shell for WASM work
-        # -------------------------------
+      let
+        pkgs = import nixpkgs {
+          inherit system;
+        };
+
+        # Import your custom WASM-enabled GHC environment
+        ghcWasmEnv = pkgs.callPackage ./pkgs/wasm32-wasi-ghc-full.nix { };
+      in
+      {
+
+        # -------------------------------------
+        # Development shell with GHC WASM toolset
+        # -------------------------------------
         devShells.default = pkgs.mkShell {
           name = "NGOLogisticsCG";
 
-          buildInputs = with pkgs; [
-            # Haskell Reflex Platform
-            reflex
-	    obelisk
+          buildInputs = [
+            # Your custom WASM GHC env
+            ghcWasmEnv
 
-            # Web/WASM build toolchain
-            nodejs_20
-            wasm-pack
-            binaryen
-            emscripten
-	    llvm
-	    clang
-	    lld
-	    wabt
+            # Obelisk (from upstream nixpkgs)
+            pkgs.obelisk
 
-            # Tools
-            git
-            curl
-            wget
-            typescript
-            vim
+            # Web & WASM toolchain
+            pkgs.nodejs_20
+            pkgs.wasm-pack
+            pkgs.binaryen
+            pkgs.emscripten
+            pkgs.llvm
+            pkgs.clang
+            pkgs.lld
+            pkgs.wabt
 
-            self.packages.${system}.ghc-wasm32-wasi-full
+            # Utilities
+            pkgs.git
+            pkgs.curl
+            pkgs.wget
+            pkgs.typescript
+            pkgs.vim
           ];
 
           shellHook = ''
-            echo "[NGOLogisticsCG] WASM + Reflex Development Environment"
-            echo "cd ~/Dev/NGOLogisticsCG && ./scripts/build.sh"
+            echo "✔ NGOLogisticsCG WASM + Obelisk DevShell Active"
+            echo "Use: ob run  |  ./scripts/build-reactor.sh"
           '';
         };
 
-        # -------------------------------
-        # Packages (if you later build a binary)
-        # -------------------------------
-        packages = { };
+        # -------------------------------------
+        # Exported packages
+        # -------------------------------------
+        packages = {
+          ghc-wasm32-wasi-env = ghcWasmEnv;
+        };
 
-        # -------------------------------
-        # Apps (nix run)
-        # -------------------------------
+        # -------------------------------------
+        # nix run .  launches local dev server
+        # -------------------------------------
         apps.default = {
           type = "app";
-          program = ''${pkgs.bash}/bin/bash -c "cd $PWD && npm run dev"'';
+          program = "${pkgs.bash}/bin/bash -c \"cd $PWD && npm run dev\"";
         };
 
       });
