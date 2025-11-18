@@ -20,7 +20,8 @@
 
           buildInputs = with pkgs; [
             # Haskell Reflex Platform
-            reflex-platform
+            reflex
+	    obelisk
 
             # Web/WASM build toolchain
             nodejs_20
