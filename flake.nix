@@ -27,6 +27,10 @@
             wasm-pack
             binaryen
             emscripten
+	    llvm
+	    clang
+	    lld
+	    wabt
 
             # Tools
             git
@@ -34,6 +38,8 @@
             wget
             typescript
             vim
+
+            self.packages.${system}.ghc-wasm32-wasi-full
           ];
 
           shellHook = ''
