@@ -23,44 +23,41 @@
         # Development shell with GHC WASM toolset
         # -------------------------------------
         devShells.default = pkgs.mkShell {
-          name = "NGOLogisticsCG";
+          buildInputs = with pkgs; [
+          #   reflex
+            obelisk
+            nodejs_20
+            wasm-pack
+            binaryen
+            emscripten
+            llvm
+            clang
+            lld
+            wabt
+            git
+            curl
+            wget
+            typescript
+            vim
 
-          buildInputs = [
-            # Your custom WASM GHC env
-            ghcWasmEnv
+         # ✔ Correct
+            (self.packages.${system}.ghc-wasm32-wasi-full)
+         ];
 
-            # Obelisk (from upstream nixpkgs)
-            pkgs.obelisk
-
-            # Web & WASM toolchain
-            pkgs.nodejs_20
-            pkgs.wasm-pack
-            pkgs.binaryen
-            pkgs.emscripten
-            pkgs.llvm
-            pkgs.clang
-            pkgs.lld
-            pkgs.wabt
-
-            # Utilities
-            pkgs.git
-            pkgs.curl
-            pkgs.wget
-            pkgs.typescript
-            pkgs.vim
-          ];
-
-          shellHook = ''
-            echo "✔ NGOLogisticsCG WASM + Obelisk DevShell Active"
-            echo "Use: ob run  |  ./scripts/build-reactor.sh"
-          '';
-        };
+     shellHook = ''
+       export WASI_SYSROOT="${self.packages.${system}.ghc-wasm32-wasi-full}/wasi-sdk/share/wasi-sysroot"
+       echo "WASI_SYSROOT=$WASI_SYSROOT"
+       '';
+     };
 
         # -------------------------------------
         # Exported packages
         # -------------------------------------
         packages = {
-          ghc-wasm32-wasi-env = ghcWasmEnv;
+          ghc-wasm32-wasi-full =
+            import ./pkgs/wasm32-wasi-ghc-full.nix {
+              inherit pkgs;
+            };
         };
 
         # -------------------------------------
