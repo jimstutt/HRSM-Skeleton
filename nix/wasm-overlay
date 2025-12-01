@@ -1,0 +1,9 @@
+# Simple overlay that exposes local ghc-wasm-meta packages under pkgs.wasm
+self: super: {
+  wasm = super.callPackage ./ghc-wasm-meta-compat.nix {};
+}
+
+# Note: This is a tiny shim. If you want to import the full ghc-wasm-meta
+# overlay from your local clone, create a proper overlay that imports
+# ghc-wasm-meta/overlays/default.nix from your local repo. This file keeps
+# things small and avoids many flake overlay errors.

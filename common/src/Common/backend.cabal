@@ -1,0 +1,35 @@
+cabal-version: 3.0
+name: backend
+version: 0.1.0.0
+license: BSD-3-Clause
+build-type: Simple
+
+common deps
+  build-depends:
+    base >= 4.7 && < 5,
+    common,
+    text,
+    servant-server,
+    wai,
+    warp,
+    mysql-simple, -- MariaDB driver
+    bytestring,
+    pool,
+    resource-pool
+
+library
+  import: deps
+  exposed-modules:
+    Backend
+    DB
+
+  hs-source-dirs: src
+  default-language: Haskell2010
+  ghc-options: -Wall -Werror
+
+executable backend
+  import: deps
+  main-is: Main.hs
+  hs-source-dirs: src-bin
+  default-language: Haskell2010
+  

@@ -1,72 +1,115 @@
 {
-  description = "NGOLogisticsCG WASM/Web + DevShell";
+  description = "Reflex-DOM + GHC WASM Application";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    
+    # FIX: Correctly specify the ghc-wasm-meta repository host on GitLab
+    ghc-wasm-meta = {
+      url = "github:ghc-wasm/ghc-wasm-meta";
+      rev = "b8dd18a3ef99ff995d5e3a302b0d9bf4addac8cd";
+      inputs.nixpkgs.follows = "nixpkgs";
+};
+
     flake-utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = { self, nixpkgs, flake-utils, ... }:
+  outputs = { self, nixpkgs, ghc-wasm-meta, flake-utils, ... }:
     flake-utils.lib.eachDefaultSystem (system:
-
       let
-        pkgs = import nixpkgs {
-          inherit system;
-        };
-
-        # Import your custom WASM-enabled GHC environment
-        ghcWasmEnv = pkgs.callPackage ./pkgs/wasm32-wasi-ghc-full.nix { };
-      in
-      {
-
-        # -------------------------------------
-        # Development shell with GHC WASM toolset
-        # -------------------------------------
+        pkgs = nixpkgs.legacyPackages.${system};
+        # Get the WASM cross-compiler toolchain
+        wasmPkgs = ghc-wasm-meta.packages.${system}.wasm32-wasi; 
+        wasmGhc = wasmPkgs.ghc;
+      in {
+        # ==================================
+        # 1. Development Shell (nix develop)
+        # ==================================
         devShells.default = pkgs.mkShell {
-          buildInputs = with pkgs; [
-          #   reflex
-            obelisk
-            nodejs_20
-            wasm-pack
-            binaryen
-            emscripten
-            llvm
-            clang
-            lld
-            wabt
-            git
-            curl
-            wget
-            typescript
-            vim
+          name = "reflex-wasm-env";
+          buildInputs = [
+            # Haskell WASM Tools
+            wasmGhc
+            wasmPkgs.cabal-install
+            # Frontend Tools
+            pkgs.esbuild # For compiling TypeScript glue code
+            pkgs.nodejs
+            pkgs.typescript
+            # Helper tools
+            pkgs.python3 # For running a simple web server
+          ];
+          
+          # Use cabal.project file for dependency management
+          CABAL_PROJECT_FILE = "${self}/cabal.project";
 
-         # ✔ Correct
-            (self.packages.${system}.ghc-wasm32-wasi-full)
-         ];
-
-     shellHook = ''
-       export WASI_SYSROOT="${self.packages.${system}.ghc-wasm32-wasi-full}/wasi-sdk/share/wasi-sysroot"
-       echo "WASI_SYSROOT=$WASI_SYSROOT"
-       '';
-     };
-
-        # -------------------------------------
-        # Exported packages
-        # -------------------------------------
-        packages = {
-          ghc-wasm32-wasi-full =
-            import ./pkgs/wasm32-wasi-ghc-full.nix {
-              inherit pkgs;
-            };
+          shellHook = ''
+            echo "Environment: GHC WASM + Reflex-DOM"
+            echo "To build WASM: wasm32-wasi-cabal build wasm-modules"
+            echo "To build Client: nix build .#client"
+          '';
         };
 
-        # -------------------------------------
-        # nix run .  launches local dev server
-        # -------------------------------------
-        apps.default = {
-          type = "app";
-          program = "${pkgs.bash}/bin/bash -c \"cd $PWD && npm run dev\"";
+        # ==================================
+        # 2. WASM Haskell Build Package
+        # ==================================
+        # This package builds the Haskell code into reactor.wasm
+        packages.wasm = pkgs.stdenv.mkDerivation {
+          pname = "reactor-wasm";
+          version = "0.1.0.0";
+          src = ./wasm-modules; 
+          
+          # The entire WASM build process is handled in the shellHook/buildPhase
+          # using the WASM cross-compiler and the cabal.project file.
+          dontBuild = true;
+          dontInstall = true;
+          
+          # Use the devShell to run the build command, ensuring the environment is set up.
+          buildPhase = ''
+            # Use the wasm32-wasi compiler to build the 'wasm-modules' package
+            wasm32-wasi-cabal build wasm-modules \
+              --enable-split-sections \
+              --enable-split-objs \
+              --ghc-options="-no-hs-main -optl-mexec-model=reactor" \
+              -v0
+          '';
+          
+          installPhase = ''
+            # Find and copy the built WASM file
+            mkdir -p $out
+            find . -name "wasm-modules.wasm" -exec cp {} $out/reactor.wasm \;
+          '';
         };
 
-      });
+        # ==================================
+        # 3. Client Assets Package (TS -> JS)
+        # ==================================
+        # This package bundles the web assets, including compiling main.ts
+        packages.client = pkgs.stdenv.mkDerivation {
+          pname = "client-assets";
+          version = "0.1.0.0";
+          src = ./frontend; 
+          buildInputs = [ pkgs.esbuild ]; # Use esbuild to transpile TS
+          
+          buildPhase = ''
+            # Compile TypeScript glue code into a single JavaScript file
+            esbuild main.ts --bundle --outfile=main.js --format=esm
+          '';
+          
+          installPhase = ''
+            mkdir -p $out
+            cp index.html $out/
+            cp main.js $out/
+          '';
+        };
+        
+        # ==================================
+        # 4. Combined Default Result
+        # ==================================
+        packages.default = pkgs.symlinkJoin {
+            name = "full-app";
+            paths = [ self.packages.${system}.wasm self.packages.${system}.client ];
+            # Final result contains both reactor.wasm and the client files (index.html, main.js)
+        };
+      }
+    );
 }

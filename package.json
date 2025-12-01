@@ -1,0 +1,14 @@
+{
+  "name": "ngologistics-wasm-runner",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "node scripts/serve-wasm.js",
+      "install-cdn": "echo Using CDN rather than installing heavy native packages",
+      "build:ts": "tsc frontend/loader.ts --outDir static/frontend"
+  },
+  "dependencies": {
+    "@wasmer/wasi": "^2.2.0",
+    "express": "^4.18.2"
+  }
+}
