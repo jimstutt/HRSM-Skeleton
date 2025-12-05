@@ -4,17 +4,17 @@ let
   # otherwise rely on the project flake's devShell (Recommended).
 in
 {
-  home.packages = with pkgs; [
-    # Standard Haskell Tools
-    cabal-install
-    
-    # WASM Tools
-    wasmtime        # Run WASM on CLI
-    wabt            # wasm-objdump, wasm-decompile
-    
-    # Node/Frontend tools (often needed for the JS glue code)
-    nodejs_20
+
+{ pkgs, inputs, ... }:  # ← receive `inputs`
+{
+  # ...
+  home.packages = [
+    inputs.wasmFlake.packages.${pkgs.system}.ghc-wasm32-wasi
+    # or however the package is exposed — check with `nix flake show github:haskell-wasm/ghc-wasm-meta`
   ];
+}
+
+
   
   # Note: We do NOT install 'reflex-platform' here. 
   # It is managed strictly by the project configuration.
