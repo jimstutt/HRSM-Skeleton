@@ -1,0 +1,112 @@
+{
+  description = "NGOLogisticsCG – Reflex-DOM WASM frontend + Native Servant backend (Pinned ghc-wasm-meta)";
+
+  ###############################################
+  ## INPUTS
+  ###############################################
+
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";
+    flake-utils.url = "github:numtide/flake-utils";
+
+    # Correctly pinned WASM toolchain from GitLab
+    ghc-wasm-meta = {
+      url = "git+https://gitlab.haskell.org/haskell-wasm/ghc-wasm-meta.git";
+      rev = "01679cb5e8c6ed1c80218ce09f2d10766c1a5b1d";
+      sha256 = "sha256-83PtOfCHZhby/isbpHiEG61BkoPK42zCi0lr3JTRStw=";
+
+      # CORRECT nested follows syntax
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+      };
+    };
+  };
+
+  ###############################################
+  ## OUTPUTS
+  ###############################################
+
+  outputs = { self, nixpkgs, flake-utils, ghc-wasm-meta, ... }:
+    flake-utils.lib.eachDefaultSystem (system:
+
+    let
+      # Host system package set
+      pkgs = nixpkgs.legacyPackages.${system};
+
+      # WASM toolchain from ghc-wasm-meta
+      wasmPkgs = ghc-wasm-meta.packages.wasm32-wasi;
+
+      # Haskell package sets
+      nativeHs = pkgs.haskellPackages;
+      wasmHs   = wasmPkgs.haskellPackages;
+
+    in
+    {
+
+      ############################################
+      ## DEVELOPMENT SHELLS
+      ############################################
+
+      devShells = {
+        # Native Servant backend shell
+        native = pkgs.mkShell {
+          name = "ngologistics-backend-shell";
+          buildInputs = [
+            pkgs.cabal-install
+            pkgs.ghc
+            pkgs.mariadb
+            pkgs.pkg-config
+            pkgs.openssl
+          ];
+          shellHook = ''
+            echo "Native backend development shell loaded."
+          '';
+        };
+
+        # WASM Reflex-DOM frontend shell
+        wasm = pkgs.mkShell {
+          name = "ngologistics-wasm-shell";
+          buildInputs = [
+            wasmPkgs.ghc
+            wasmPkgs.cabal-install
+            wasmPkgs.binaryen
+            wasmPkgs.wasm-tools
+
+            # JS bundling / tooling
+            pkgs.nodejs_20
+            pkgs.typescript
+          ];
+          shellHook = ''
+            echo "WASM frontend development shell loaded."
+          '';
+        };
+      };
+
+      ############################################
+      ## PACKAGES
+      ############################################
+
+      packages = {
+        backend =
+          nativeHs.callCabal2nix "backend" ./backend { };
+
+        frontend =
+          wasmHs.callCabal2nix "frontend" ./frontend { };
+
+        common =
+          nativeHs.callCabal2nix "common" ./common { };
+
+        "logistics-common" =
+          nativeHs.callCabal2nix "logistics-common" ./logistics-common { };
+      };
+
+      ############################################
+      ## DEFAULT APP (Runs Backend)
+      ############################################
+
+      apps.default = {
+        type = "app";
+        program = "${self.packages.${system}.backend}/bin/backend";
+      };
+    });
+}
