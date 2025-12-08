@@ -1,0 +1,28 @@
+name: NGOL-CG CI
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v30
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      - name: Cache Nix
+        uses: actions/cache@v4
+        with:
+          path: /nix/store
+          key: nix-${{ hashFiles('flake.lock') }}
+
+      - name: Format check
+        run: nix fmt --check
+
+      - name: Build WASM
+        run: nix build .#wasm
+	
