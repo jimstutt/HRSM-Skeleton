@@ -1,32 +1,27 @@
-{ pkgs }:
-
-# Minimal local-WASI-SDK derivation.
-#
-# Uses your downloaded:
-#   /home/jim/Dev/wasi-sdk-21.0-linux.tar.gz
-#
-# No arguments, no `src = …` required.
+{ stdenv }:
 
 let
-  tarball = /home/jim/Dev/wasi-sdk-21.0-linux.tar.gz;
+  tarball = builtins.path {
+    path = ./vendor/wasi-sdk-21.0-linux.tar.gz;
+    name = "wasi-sdk-21.0";
+  };
 in
-
-pkgs.stdenv.mkDerivation {
-  pname = "wasi-sdk";
+stdenv.mkDerivation {
+  pname = "wasi-sdk-21.0";
   version = "21.0";
 
   src = tarball;
 
-  dontConfigure = true;
-  dontBuild = true;
+  dontUnpack = false;
 
-  installPhase = ''
-    mkdir -p $out/wasi-sdk
-    tar -xzf $src --strip-components=1 -C $out/wasi-sdk
+  unpackPhase = ''
+    mkdir -p wasi-src
+    tar -xzf $src -C wasi-src --strip-components=1
   '';
 
-  meta = {
-    description = "WASI SDK 21.0 (local tarball)";
-    platforms = pkgs.lib.platforms.linux;
-  };
+  installPhase = ''
+    mkdir -p $out
+    cp -r wasi-src/* $out/
+  '';
 }
+
