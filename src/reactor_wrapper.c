@@ -1,24 +1,24 @@
-// src/reactor_wrapper.c
-// Minimal C wrapper to call an exported Haskell symbol named `reactor`
-// Exports a C function `call_reactor` which will be exported into the final .wasm
+/* Minimal C wrapper to expose a named function to JS/WASM runtime.
+ *
+ * Put this file at: ~/Dev/NGOLogisticsCG/src/reactor_wrapper.c
+ *
+ * This example exposes `reactor_entry` which you can call from JS after instantiating the WASM.
+ *
+ * If your Haskell/ghc-wasm build produces functions with known names (C symbols), you can declare them
+ * as extern and call them from here (or use this wrapper purely to export a small entrypoint).
+ */
 
-// If HsFFI.h is present in your wasi-enabled GHC include, you can include it.
-// But to remain portable we declare the symbol manually.
+#include <stdint.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-// Haskell exported symbol - adjust name & signature to match your Haskell code.
-// Here we assume: foreign export ccall reactor :: IO ()
-extern void reactor(void);
-
-// Wrapper we will export from the wasm module
-void call_reactor(void) {
-    // call the Haskell exported function
-    reactor();
+/* example: export a small entry function that returns an integer (0) */
+int reactor_entry(void) {
+    /* Replace with a call to a real symbol from your GHC-produced objects if available:
+       extern int hs_reactor_start(void);
+       return hs_reactor_start();
+    */
+    return 0;
 }
 
-#ifdef __cplusplus
-}
-#endif
+/* Export the function name explicitly via attribute (keeps symbol unmangled) */
+__attribute__((used))
+extern int reactor_entry(void);

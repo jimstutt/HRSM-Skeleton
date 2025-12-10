@@ -1,0 +1,36 @@
+# ~/Dev/NGOLogisticsCG/.github/workflows/ci.yml
+name: NGOLogisticsCG CI
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v30
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      - name: Cache Nix store
+        uses: actions/cache@v4
+        with:
+          path: /nix/store
+          key: nix-${{ hashFiles('flake.lock') }}
+
+      - name: Format check (nix fmt)
+        run: |
+          nix fmt --check
+
+      - name: Check GHC-WASM (via local flake)
+        run: nix develop .#default --command ghc --version
+
+      - name: Build Reflex app
+        run: |
+          nix develop .#default --command sh -c '
+            cabal update
+            cabal build --enable-tests
+          '
