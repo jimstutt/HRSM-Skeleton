@@ -1,43 +1,13 @@
 packages:
-  .
-  common
-  frontend
+  frontend-wasm
   backend
+  common
 
--- Common dependencies for all packages
-with-compiler: ghc-9.6.5
-optimization: 2
+package frontend-wasm
+  ghc-options: -Wall
 
-source-repository-package
-  type: git
-  location: https://github.com/haskell-beam/beam.git
-  tag: 76f9d2d8544d673199839443e2ff507727d2c380
-  subdir: beam-core beam-mysql beam-migrate
+package backend
+  ghc-options: -Wall
 
--- Essential: Allow newer GHC versions common in ghc-wasm-meta
-allow-newer: all
-
--- 1. Force the use of jsaddle-wasm
--- This library bridges Reflex to the browser via WASM
-
--- 2. Constraints to ensure we use the core logic without native UI deps
-constraints:
-  reflex-dom-core +wasm
-  
--- Pin specific WASM-compatible versions of core libraries
--- These packages enable the JavaScript FFI for the WASM backend (jsaddle-wasm).
-
-source-repository-package
-  type: git
-  location: https://github.com/amesgen/jsaddle-wasm.git
-  tag: 7a82f347d4484b9ed15e985b46e30097f56116f1 -- Use a recent, known working commit
-
-  -- Necessary flags for GHC WASM / Template Haskell support
-package jsaddle-wasm
-  flags: -eval-via-jsffi
-
-source-repository-package
-  type: git
-  location: https://github.com/reflex-frp/reflex-dom.git
-  tag: f5259e83e6022e307406a6c0e0b5f543e099616d -- WASM-compatible reflex-dom-core
-  subdir: reflex-dom-core
+program-options
+  ghc-options: -split-sections

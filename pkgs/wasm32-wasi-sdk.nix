@@ -1,27 +1,20 @@
-{ stdenv }:
+{ pkgs }:
 
 let
-  tarball = builtins.path {
-    path = ./vendor/wasi-sdk-21.0-linux.tar.gz;
-    name = "wasi-sdk-21.0";
+  wasiTarball = pkgs.fetchurl {
+    url = "https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-21/wasi-sdk-21.0-linux.tar.gz";
+    sha256 = "sha256-8v4HI7M3xIRVaxnWTA9sYESCcBS/zUA9AJUcZahs+iY=";
   };
 in
-stdenv.mkDerivation {
-  pname = "wasi-sdk-21.0";
-  version = "21.0";
+pkgs.stdenv.mkDerivation {
+  name = "wasi-sdk-21.0";
 
-  src = tarball;
+  src = wasiTarball;
 
-  dontUnpack = false;
+  nativeBuildInputs = [ pkgs.autoPatchelfHook ];
 
   unpackPhase = ''
-    mkdir -p wasi-src
-    tar -xzf $src -C wasi-src --strip-components=1
-  '';
-
-  installPhase = ''
     mkdir -p $out
-    cp -r wasi-src/* $out/
+    tar -xzf $src --strip-components=1 -C $out
   '';
 }
-
