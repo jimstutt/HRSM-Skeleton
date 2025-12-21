@@ -1,21 +1,19 @@
 cabal-version:      3.8
-name:               frontend
+name:               shared
 version:            0.1.0.0
 build-type:         Simple
 
-executable frontend
-  main-is: Main.hs
+library
+  exposed-modules:
+    Shared.API
 
   hs-source-dirs:
-    app
-
-  ghc-options:
-    -threaded
+    src
 
   build-depends:
       base
-    , reflex
-    , reflex-dom-core
-    , shared
+    , servant
+    , servant-server
+    , servant-client
 
   default-language: Haskell2010

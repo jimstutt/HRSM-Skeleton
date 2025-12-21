@@ -1,45 +1,16 @@
-{
-  description = "NGOL-CG – GHC WASM (reactor) + Reflex + Servant + sqlite-simple";
+{-# LANGUAGE ForeignFunctionInterface #-}
 
-  inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";
-    flake-utils.url = "github:numtide/flake-utils";
+module Main where
 
-    ghc-wasm-meta = {
-      url = "github:WebAssembly/ghc-wasm-meta";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-  };
+foreign export ccall reactor_start :: IO ()
+foreign export ccall reactor_stop  :: IO ()
 
-  outputs = { self, nixpkgs, flake-utils, ghc-wasm-meta }:
-    flake-utils.lib.eachDefaultSystem (system:
-      let
-        pkgs = import nixpkgs { inherit system; };
+reactor_start :: IO ()
+reactor_start = putStrLn "Reactor started"
 
-        wasm = ghc-wasm-meta.packages.${system};
-      in
-      {
-        devShells.default = pkgs.mkShell {
-          name = "NGOL-CG-devshell";
+reactor_stop :: IO ()
+reactor_stop = putStrLn "Reactor stopped"
 
-          buildInputs = [
-            wasm.wasm32-wasi-ghc
-            wasm.wasi-sdk
-            pkgs.nodejs_20
-            pkgs.sqlite
-            pkgs.pkg-config
-          ];
+main :: IO ()
+main = pure ()
 
-          shellHook = ''
-            export WASI_SYSROOT=${wasm.wasi-sdk}/share/wasi-sysroot
-            export PATH=${wasm.wasm32-wasi-ghc}/bin:$PATH
-
-            echo "========================================"
-            echo "NGOL-CG WASM dev shell ready"
-            echo "GHC: $(which wasm32-wasi-ghc)"
-            echo "WASI_SYSROOT=$WASI_SYSROOT"
-            echo "========================================"
-          '';
-        };
-      });
-}

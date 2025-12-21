@@ -1,13 +1,9 @@
 packages:
-  frontend-wasm
   backend
-  common
+  frontend
+  shared
 
-package frontend-wasm
-  ghc-options: -Wall
+with-compiler: ghc
 
-package backend
-  ghc-options: -Wall
-
-program-options
-  ghc-options: -split-sections
+constraints:
+  reflex >= 0.9

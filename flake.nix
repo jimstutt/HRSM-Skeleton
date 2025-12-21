@@ -1,48 +1,111 @@
-# ~/Dev/NGOL-CG/flake.nix
-
-# Minimal, correct flake for building wasm32-wasi reactors with GHC
-
-# No obelisk. No ghc-wasm-meta. No broken flags.
-
 {
-description = "NGOL-CG – Minimal GHC wasm32-wasi reactor devshell";
+  description = "NGOL-CG – Bootstrap flake (native + WASM toolchains)";
 
 inputs = {
-nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";
-};
+  nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";
+  flake-utils.url = "github:numtide/flake-utils";
 
-outputs = { self, nixpkgs }:
-let
-system = "x86_64-linux";
-pkgs = import nixpkgs { inherit system; };
-
-```
-  # Cross-compiled toolchain targeting wasm32-wasi
-  wasiPkgs = pkgs.pkgsCross.wasi32;
-
-  ghcWasi = wasiPkgs.ghc;
-
-  wasiSysroot = wasiPkgs.wasi-libc.dev;
-in
-{
-  devShells.${system}.default = pkgs.mkShell {
-    name = "NGOL-CG-devshell";
-
-    buildInputs = [
-      ghcWasi
-      wasiPkgs.clang
-      wasiPkgs.lld
-      wasiPkgs.wasi-libc
-      pkgs.binaryen
-    ];
-
-    shellHook = ''
-      export WASI_SYSROOT="${wasiSysroot}/share/wasi-sysroot"
-      echo "WASI_SYSROOT=$WASI_SYSROOT"
-      echo "Ready to build wasm32-wasi reactors with GHC"
-    '';
+  ghc-wasm-meta = {
+    url = "git+https://github.com/input-output-hk/ghc-wasm-meta.git?ref=main";
+    inputs.nixpkgs.follows = "nixpkgs";
   };
 };
-```
 
+  outputs =
+    { self
+    , nixpkgs
+    , flake-utils
+    , ghc-wasm-meta
+    }:
+
+    flake-utils.lib.eachDefaultSystem (system:
+      let
+        pkgs = import nixpkgs {
+          inherit system;
+          config.allowUnfree = false;
+        };
+
+        # -----------------------------
+        # Native Haskell toolchain
+        # -----------------------------
+        nativeHaskell = pkgs.haskell.packages.ghc965;
+
+        nativeTools = with pkgs; [
+          git
+          sqlite
+          sqlitebrowser
+          pkg-config
+          cacert
+        ];
+
+        # -----------------------------
+        # WASM toolchain (explicit)
+        # -----------------------------
+        wasmPkgs =
+          ghc-wasm-meta.packages.${system};
+
+        wasmGhc =
+          wasmPkgs.ghc;
+
+        wasmTools = with pkgs; [
+          binaryen
+          wabt
+        ];
+
+      in
+      {
+        # =============================
+        # Packages
+        # =============================
+        packages = {
+          native-ghc = nativeHaskell.ghc;
+          wasm-ghc   = wasmGhc;
+        };
+
+        # =============================
+        # Development shells
+        # =============================
+        devShells = {
+          native = pkgs.mkShell {
+            name = "ngol-cg-native";
+
+            buildInputs =
+              [ nativeHaskell.ghc ]
+              ++ nativeTools;
+
+            shellHook = ''
+              echo "NGOL-CG native shell"
+              echo "GHC: $(${nativeHaskell.ghc}/bin/ghc --version)"
+              echo "SQLite: $(sqlite3 --version)"
+            '';
+          };
+
+          wasm = pkgs.mkShell {
+            name = "ngol-cg-wasm";
+
+            buildInputs =
+              [ wasmGhc ]
+              ++ wasmTools;
+
+            shellHook = ''
+              echo "NGOL-CG WASM shell"
+              echo "GHC (wasm): $(${wasmGhc}/bin/ghc --version)"
+            '';
+          };
+        };
+
+        # =============================
+        # Checks (flake hygiene)
+        # =============================
+        checks = {
+          native-ghc = pkgs.runCommand "check-native-ghc" { } ''
+            ${nativeHaskell.ghc}/bin/ghc --version > $out
+          '';
+
+          wasm-ghc = pkgs.runCommand "check-wasm-ghc" { } ''
+            ${wasmGhc}/bin/ghc --version > $out
+          '';
+        };
+      }
+    );
 }
