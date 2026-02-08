@@ -14,3 +14,15 @@ result-*
 tags
 TAGS
 static.out
+
+# Database files
+*.sqlite
+*.sqlite3
+*.db
+
+# Temporary files
+11.9.0
+npm
+
+# Development files
+Claude.md
