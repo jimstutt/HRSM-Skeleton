@@ -1,110 +1,75 @@
 {
-  description = "NGOL-CG – Bootstrap flake (native + WASM toolchains)";
+  description = "Full-stack Haskell: Reflex (Wasm), Servant, and MariaDB";
 
-inputs = {
-  nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";
-  flake-utils.url = "github:numtide/flake-utils";
-
-  ghc-wasm-meta = {
-    url = "git+https://github.com/input-output-hk/ghc-wasm-meta.git?ref=main";
-    inputs.nixpkgs.follows = "nixpkgs";
+  inputs = {
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-24.11";
+    flake-utils.url = "github:numtide/flake-utils";
+    # Provides the GHC Wasm backend toolchain
+    ghc-wasm-meta.url = "gitlab:haskell-wasm/ghc-wasm-meta?host=gitlab.haskell.org";
   };
-};
 
-  outputs =
-    { self
-    , nixpkgs
-    , flake-utils
-    , ghc-wasm-meta
-    }:
-
+  outputs = { self, nixpkgs, flake-utils, ghc-wasm-meta, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
-        pkgs = import nixpkgs {
-          inherit system;
-          config.allowUnfree = false;
+        pkgs = import nixpkgs { inherit system; };
+        
+        # Access the Wasm-enabled GHC provided by the input
+        wasm-pkgs = ghc-wasm-meta.packages.${system};
+
+        # Standard Haskell setup for Backend/Common
+        haskellPackages = pkgs.haskellPackages.override {
+          overrides = hfinal: hprev: {
+            # Add local project packages
+            common = hfinal.callCabal2nix "common" ./common {};
+            shared = hfinal.callCabal2nix "shared" ./shared {};
+            backend = hfinal.callCabal2nix "backend" ./backend {};
+          };
         };
 
-        # -----------------------------
-        # Native Haskell toolchain
-        # -----------------------------
-        nativeHaskell = pkgs.haskell.packages.ghc965;
+      in {
+        # 1. Development Shell
+        devShells.default = pkgs.mkShell {
+          name = "haskell-wasm-dev";
+          buildInputs = [
+            # Haskell tools for Backend
+            haskellPackages.ghc
+            pkgs.cabal-install
+            pkgs.haskell-language-server
+            
+            # Wasm toolchain for Frontend
+            wasm-pkgs.all_9_10 # or latest available version
+            
+            # Database & System Tools
+            pkgs.mariadb
+            pkgs.pkg-config
+            pkgs.zlib
+          ];
 
-        nativeTools = with pkgs; [
-          git
-          sqlite
-          sqlitebrowser
-          pkg-config
-          cacert
-        ];
+          shellHook = ''
+            echo "Entering Haskell Wasm + MariaDB Dev Environment"
+            # Optional: Setup local MariaDB data dir for development
+            export MYSQL_HOME=$PWD/.mysql
+            mkdir -p $MYSQL_HOME
+          '';
+        };
 
-        # -----------------------------
-        # WASM toolchain (explicit)
-        # -----------------------------
-        wasmPkgs =
-          ghc-wasm-meta.packages.${system};
-
-        wasmGhc =
-          wasmPkgs.ghc;
-
-        wasmTools = with pkgs; [
-          binaryen
-          wabt
-        ];
-
-      in
-      {
-        # =============================
-        # Packages
-        # =============================
+        # 2. Packages (Build outputs)
         packages = {
-          native-ghc = nativeHaskell.ghc;
-          wasm-ghc   = wasmGhc;
-        };
-
-        # =============================
-        # Development shells
-        # =============================
-        devShells = {
-          native = pkgs.mkShell {
-            name = "ngol-cg-native";
-
-            buildInputs =
-              [ nativeHaskell.ghc ]
-              ++ nativeTools;
-
-            shellHook = ''
-              echo "NGOL-CG native shell"
-              echo "GHC: $(${nativeHaskell.ghc}/bin/ghc --version)"
-              echo "SQLite: $(sqlite3 --version)"
+          backend = haskellPackages.backend;
+          # Frontend must be built using the wasm32-wasi-cabal wrapper
+          frontend-wasm = pkgs.stdenv.mkDerivation {
+            name = "frontend-wasm";
+            src = ./.;
+            buildInputs = [ wasm-pkgs.all_9_10 pkgs.cabal-install ];
+            buildPhase = ''
+              export HOME=$TMPDIR
+              wasm32-wasi-cabal build frontend
+            '';
+            installPhase = ''
+              mkdir -p $out
+              find dist-newstyle -name "*.wasm" -exec cp {} $out/ \;
             '';
           };
-
-          wasm = pkgs.mkShell {
-            name = "ngol-cg-wasm";
-
-            buildInputs =
-              [ wasmGhc ]
-              ++ wasmTools;
-
-            shellHook = ''
-              echo "NGOL-CG WASM shell"
-              echo "GHC (wasm): $(${wasmGhc}/bin/ghc --version)"
-            '';
-          };
-        };
-
-        # =============================
-        # Checks (flake hygiene)
-        # =============================
-        checks = {
-          native-ghc = pkgs.runCommand "check-native-ghc" { } ''
-            ${nativeHaskell.ghc}/bin/ghc --version > $out
-          '';
-
-          wasm-ghc = pkgs.runCommand "check-wasm-ghc" { } ''
-            ${wasmGhc}/bin/ghc --version > $out
-          '';
         };
       }
     );

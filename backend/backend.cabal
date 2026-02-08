@@ -13,6 +13,7 @@ executable backend
       base
     , servant
     , servant-server
+    , wai
     , warp
     , sqlite-simple
     , directory
