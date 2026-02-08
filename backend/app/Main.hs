@@ -10,6 +10,7 @@ import qualified Data.Text as T
 import Database.SQLite.Simple
 import Network.Wai
 import Network.Wai.Handler.Warp
+import Network.Wai.Middleware.Cors
 import Servant
 import System.Directory
 import System.FilePath
@@ -72,7 +73,13 @@ server _conn =
 
 app :: Connection -> Application
 app conn =
-  serve api (server conn)
+  cors (const $ Just corsPolicy) $ serve api (server conn)
+  where
+    corsPolicy = simpleCorsResourcePolicy
+      { corsOrigins = Nothing  -- Allow all origins
+      , corsMethods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+      , corsRequestHeaders = ["Content-Type"]
+      }
 
 --------------------------------------------------------------------------------
 -- Main
