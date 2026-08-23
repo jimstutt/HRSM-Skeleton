@@ -1,75 +1,59 @@
 {
-  description = "Full-stack Haskell: Reflex (Wasm), Servant, and MariaDB";
+  description = "HRSM-Skeleton: Haskell Wasm Reflex Servant App";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-24.11";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
-    # Provides the GHC Wasm backend toolchain
-    ghc-wasm-meta.url = "gitlab:haskell-wasm/ghc-wasm-meta?host=gitlab.haskell.org";
   };
 
-  outputs = { self, nixpkgs, flake-utils, ghc-wasm-meta, ... }:
+  outputs = { self, nixpkgs, flake-utils }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs { inherit system; };
         
-        # Access the Wasm-enabled GHC provided by the input
-        wasm-pkgs = ghc-wasm-meta.packages.${system};
+        # Standard GHC for backend and common
+        haskellPkgs = pkgs.haskellPackages;
+        
+        # Wasm GHC for frontend (Reflex-DOM compiled to Wasm)
+        haskellWasmPkgs = pkgs.haskell.packages.ghcWasm;
 
-        # Standard Haskell setup for Backend/Common
-        haskellPackages = pkgs.haskellPackages.override {
-          overrides = hfinal: hprev: {
-            # Add local project packages
-            common = hfinal.callCabal2nix "common" ./common {};
-            shared = hfinal.callCabal2nix "shared" ./shared {};
-            backend = hfinal.callCabal2nix "backend" ./backend {};
-          };
-        };
+        # Helper to build cabal packages
+        mkPkg = pkgsSet: name: src: 
+          pkgsSet.callCabal2nix name src {};
 
-      in {
-        # 1. Development Shell
-        devShells.default = pkgs.mkShell {
-          name = "haskell-wasm-dev";
-          buildInputs = [
-            # Haskell tools for Backend
-            haskellPackages.ghc
-            pkgs.cabal-install
-            pkgs.haskell-language-server
-            
-            # Wasm toolchain for Frontend
-            wasm-pkgs.all_9_10 # or latest available version
-            
-            # Database & System Tools
-            pkgs.mariadb
-            pkgs.pkg-config
-            pkgs.zlib
-          ];
+        # Emacs 30 package set
+        emacsPkgs = pkgs.emacsPackagesFor pkgs.emacs30;
 
-          shellHook = ''
-            echo "Entering Haskell Wasm + MariaDB Dev Environment"
-            # Optional: Setup local MariaDB data dir for development
-            export MYSQL_HOME=$PWD/.mysql
-            mkdir -p $MYSQL_HOME
-          '';
-        };
-
-        # 2. Packages (Build outputs)
+      in
+      {
         packages = {
-          backend = haskellPackages.backend;
-          # Frontend must be built using the wasm32-wasi-cabal wrapper
-          frontend-wasm = pkgs.stdenv.mkDerivation {
-            name = "frontend-wasm";
-            src = ./.;
-            buildInputs = [ wasm-pkgs.all_9_10 pkgs.cabal-install ];
-            buildPhase = ''
-              export HOME=$TMPDIR
-              wasm32-wasi-cabal build frontend
-            '';
-            installPhase = ''
-              mkdir -p $out
-              find dist-newstyle -name "*.wasm" -exec cp {} $out/ \;
-            '';
-          };
+          common = mkPkg haskellPkgs "HRSM-Common" ./common;
+          backend = mkPkg haskellPkgs "HRSM-Backend" ./backend;
+          
+          # Frontend built with ghcWasm for WebAssembly target
+          frontend-wasm = mkPkg haskellWasmPkgs "HRSM-Frontend" ./frontend;
+          
+          default = self.packages.${system}.backend;
+        };
+
+        devShells.default = pkgs.mkShell {
+          buildInputs = [
+            haskellPkgs.cabal-install
+            haskellPkgs.haskell-language-server
+            pkgs.mariadb
+            
+            # Project-specific Emacs with gptel injected
+            (emacsPkgs.emacsWithPackages (epkgs: [
+              epkgs.gptel
+            ]))
+          ];
+          
+          shellHook = ''
+            echo "[HRSM] Development shell loaded."
+            echo " - Backend: nix build .#backend"
+            echo " - Frontend: nix build .#frontend-wasm"
+            echo " - Emacs with gptel is available in this shell."
+          '';
         };
       }
     );

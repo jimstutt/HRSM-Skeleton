@@ -1,44 +1,39 @@
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
+
 module DB
-  ( withConnPool
-  , getAllUsers
+  ( DBConn
+  , initDB
+  , getTasks
+  , createTask
   ) where
 
-import Common.Types (User(..))
-import Database.MySQL.Simple
-import Data.Pool (Pool, createPool, withResource)
-import Control.Exception (bracket)
+import Data.Text (Text)
+import Database.MySQL.Simple (ConnectInfo(..), Connection, connect, defaultConnectInfo, execute, query_)
+import Common.Types (Task(..), TaskId)
 
--- | Database connection settings
-data DBSettings = DBSettings
-  { dbHost     :: Host
-  , dbPort     :: Port
-  , dbUser     :: User
-  , dbPassword :: Password
-  , dbName     :: Query
-  }
+-- | Wrapper for MariaDB Connection
+type DBConn = Connection
 
--- | Placeholder settings for a local MariaDB instance
-defaultSettings :: DBSettings
-defaultSettings = DBSettings "127.0.0.1" 3306 "root" "" "ngologistics_db"
+-- | Initialize MariaDB connection
+initDB :: IO DBConn
+initDB = do
+  putStrLn "[HRSM] Connecting to MariaDB..."
+  let connInfo = defaultConnectInfo 
+        { connectUser = "root"
+        , connectDatabase = "project_db"
+        }
+  connect connInfo
 
--- | Initializes a MariaDB connection and creates a connection pool.
-createMariaDBPool :: DBSettings -> IO (Pool Connection)
-createMariaDBPool s = createPool
-  (connect defaultConnectInfo { connectHost = dbHost s, connectPort = dbPort s, connectUser = dbUser s, connectPassword = dbPassword s, connectDatabase = dbName s })
-  close
-  2 -- Number of subpools to keep alive
-  60 -- Seconds to keep an idle resource
-  10 -- Max number of concurrent connections
+-- | Fetch all tasks from MariaDB
+getTasks :: DBConn -> IO [Task]
+getTasks conn = do
+  rows <- query_ conn "SELECT id, name, done FROM tasks"
+  return [ Task (Just tid) name done | (tid, name, done) <- rows ]
 
--- | Runs an IO action with a database connection pool.
-withConnPool :: (Pool Connection -> IO a) -> IO a
-withConnPool action = bracket (createMariaDBPool defaultSettings) destroyAllResources action
-
--- | Example: Fetch all users from the database.
-getAllUsers :: Pool Connection -> IO [User]
-getAllUsers pool = withResource pool $ \conn -> do
-  -- NOTE: This assumes a 'users' table exists with matching columns.
-  query_ conn "SELECT user_id, user_name, user_email FROM users"
-  -- Example: [(1, "Alice", "alice@example.com"), (2, "Bob", "bob@example.com")]
-  -- The query result must be converted to [User]
-  
+-- | Insert a new task into MariaDB
+createTask :: DBConn -> Task -> IO TaskId
+createTask conn Task{..} = do
+  _ <- execute conn "INSERT INTO tasks (name, done) VALUES (?, ?)" (taskName, taskDone)
+  -- TODO: Implement proper LAST_INSERT_ID() retrieval for production
+  return 1 
