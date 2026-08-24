@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
+DIR="/home/jimstutt/Dev/HRSM-Skeleton"
+
+echo "[HRSM] Switching to wasm32-wasi-cabal to resolve version mismatches..."
+
+cat > "$DIR/scripts/build-wasm.sh" << 'BUILD_END'
+#!/usr/bin/env bash
+set -euo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 mkdir -p "$DIR/dist-wasm"
 

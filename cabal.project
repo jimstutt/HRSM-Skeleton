@@ -3,12 +3,8 @@ packages:
   backend
   frontend-wasm
 
--- Pin specific versions to ensure Nix can fetch them without network access during build
-constraints:
-  reflex-dom == 0.6.3.4,
-  aeson == 2.2.3.0,
-  text == 2.1.1,
-  base >= 4.14 && < 5
+-- Allow cabal to resolve compatible versions for GHC 9.14
+-- Avoid strict constraints on boot libraries like text or template-haskell
 
 -- Disable documentation and tests to speed up Wasm build
 documentation: False

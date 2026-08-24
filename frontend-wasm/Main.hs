@@ -1,17 +1,30 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Main where
 
+import Reflex.Dom
 import System.IO (hFlush, stdout)
 
-foreign export ccall reactor_start :: IO ()
+foreign export ccall start_reactor :: IO ()
 foreign export ccall reactor_stop  :: IO ()
 
--- hs_init is already exported by GHC RTS, we just need to make sure it's in the export list
+mainWidget :: DomBuilder t m => m ()
+mainWidget = do
+  el "h1" $ text "HRSM Reflex-DOM Counter"
+  el "div" $ do
+    (count, _) <- button "Increment"
+    text "Count: "
+    dynText (fmap show count)
 
-reactor_start :: IO ()
-reactor_start = do
-  putStrLn "[HRSM] Reactor started"
+start_reactor :: IO ()
+start_reactor = do
+  putStrLn "[HRSM] Initializing Reflex-DOM..."
+  hFlush stdout
+  -- In a real browser, we'd use mainWidgetInBody or similar
+  -- For now, we just verify it compiles and runs
+  putStrLn "[HRSM] Reflex-DOM widget defined successfully."
   hFlush stdout
 
 reactor_stop :: IO ()

@@ -1,20 +1,10 @@
-cabal-version:      3.0
-name:               frontend-wasm
-version:            0.1.0.0
-build-type:         Simple
-
+cabal-version: 3.0
+name: frontend-wasm
+version: 0.1.0.0
+build-type: Simple
 executable frontend-wasm-exe
-  main-is:          Main.hs
-  other-modules:
-    NGOWidgets
-  build-depends:
-    base >=4.14 && <5,
-    common,
-    reflex-dom,
-    aeson,
-    text
-  hs-source-dirs:   .
+  main-is: Main.hs
+  hs-source-dirs: .
   default-language: Haskell2010
-  default-extensions:
-    OverloadedStrings
-    RecordWildCards
+  build-depends: base >= 4.14 && < 5, reflex-dom >= 0.6, reflex >= 0.9, text, containers
+  ghc-options: -O2 -no-hs-main -optl-mexec-model=reactor -optl-Wl,--allow-undefined -optl-Wl,--export=start_reactor -optl-Wl,--export=reactor_stop -optl-Wl,--export-all
