@@ -1,3 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+DIR="/home/jimstutt/Dev/HRSM-Skeleton"
+
+echo "[HRSM] Adding DeriveGeneric to common/common.cabal..."
+
+cat << 'EOF' > "$DIR/common/common.cabal"
 cabal-version:      3.0
 name:               common
 version:            0.1.0.0
@@ -21,3 +29,7 @@ library
     DataKinds
     TypeOperators
     DeriveGeneric
+EOF
+
+echo "[HRSM] common.cabal updated successfully."
+echo "Next step: Run 'nix build .#backend' again."

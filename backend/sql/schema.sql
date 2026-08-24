@@ -1,6 +1,9 @@
--- HRSM-Skeleton MariaDB Schema
-CREATE TABLE IF NOT EXISTS tasks (
+-- Clean up old tasks table if it exists
+DROP TABLE IF EXISTS tasks;
+
+-- Create the users table
+CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
-    done BOOLEAN NOT NULL DEFAULT FALSE
+    email VARCHAR(255) NOT NULL
 );

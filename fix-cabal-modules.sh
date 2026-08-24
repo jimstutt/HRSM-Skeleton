@@ -1,3 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+DIR="/home/jimstutt/Dev/HRSM-Skeleton"
+
+cat << 'EOF' > "$DIR/backend/backend.cabal"
 cabal-version:      3.0
 name:               backend
 version:            0.1.0.0
@@ -38,3 +44,6 @@ executable backend-exe
   default-extensions:
     OverloadedStrings
     RecordWildCards
+EOF
+
+echo "[HRSM] Fixed backend.cabal - removed modules from executable other-modules"

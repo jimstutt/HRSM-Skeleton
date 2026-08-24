@@ -1,3 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+DIR="/home/jimstutt/Dev/HRSM-Skeleton"
+
+echo "[HRSM] Fixing flake.nix syntax and cabal HOME directory..."
+
+cat << 'EOF' > "$DIR/flake.nix"
 {
   description = "HRSM-Skeleton: Haskell Wasm Reflex Servant App";
 
@@ -31,16 +39,26 @@
           
           nativeBuildInputs = [
             wasmToolchain
+            pkgs.cabal-install
+            pkgs.pkg-config
           ];
 
           buildPhase = ''
-            echo "[HRSM] Building Wasm frontend via scripts/build-wasm.sh"
-            bash ./scripts/build-wasm.sh
+            export HOME=$PWD
+            echo "[HRSM] Configuring cabal for Wasm compilation..."
+            cabal configure \
+              --with-compiler=wasm32-wasi-ghc \
+              --with-hc-pkg=wasm32-wasi-ghc-pkg \
+              --with-hsc2hs=wasm32-wasi-hsc2hs
+            
+            echo "[HRSM] Building frontend-wasm with Wasm GHC..."
+            cabal build frontend-wasm:frontend-wasm-exe \
+              --ghc-options="-optl-mexec-model=reactor -optl-Wl,--export=reactor_start,--export=reactor_stop,--export-all,--export=hs_init"
           '';
 
           installPhase = ''
             mkdir -p $out
-            cp dist-wasm/reactor.wasm $out/
+            find dist-newstyle -type f -name "*.wasm" | head -n 1 | xargs -I {} cp {} $out/reactor.wasm || true
             echo "[HRSM] Wasm frontend built successfully: $out/reactor.wasm"
           '';
         };
@@ -77,3 +95,7 @@
       }
     );
 }
+EOF
+
+echo "[HRSM] flake.nix updated successfully."
+echo "Next step: Run 'nix build .#frontend-wasm'"

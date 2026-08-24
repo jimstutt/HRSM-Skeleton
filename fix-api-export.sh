@@ -1,3 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+DIR="/home/jimstutt/Dev/HRSM-Skeleton"
+
+cat << 'EOF' > "$DIR/common/src/Common/Api.hs"
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeOperators #-}
 module Common.Api
@@ -6,13 +12,14 @@ module Common.Api
   ) where
 
 import Data.Proxy (Proxy(..))
-import Servant.API ((:>), (:<|>), Get, JSON, ReqBody, Post, Delete, Put, Capture)
+import Servant.API ((:>), (:<|>), Get, JSON, ReqBody, Post)
 import Common.Types (User, UserId)
 
 type API = "api" :> "users" :> Get '[JSON] [User]
       :<|> "api" :> "users" :> ReqBody '[JSON] User :> Post '[JSON] UserId
-      :<|> "api" :> "users" :> Capture "id" UserId :> Delete '[JSON] ()
-      :<|> "api" :> "users" :> Capture "id" UserId :> ReqBody '[JSON] User :> Put '[JSON] ()
 
 api :: Proxy API
 api = Proxy
+EOF
+
+echo "[HRSM] Fixed Common.Api to export API (uppercase)"

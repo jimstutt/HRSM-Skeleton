@@ -1,3 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+DIR="/home/jimstutt/Dev/HRSM-Skeleton"
+
+echo "[HRSM] Adding servant and servant-server to backend library dependencies..."
+
+cat << 'EOF' > "$DIR/backend/backend.cabal"
 cabal-version:      3.0
 name:               backend
 version:            0.1.0.0
@@ -24,7 +32,7 @@ library
 
 executable backend-exe
   main-is:          Main.hs
-  other-modules:
+  other-modules:      Backend, DB
   build-depends:
     base >=4.14 && <5,
     backend,
@@ -38,3 +46,7 @@ executable backend-exe
   default-extensions:
     OverloadedStrings
     RecordWildCards
+EOF
+
+echo "[HRSM] backend.cabal updated successfully."
+echo "Next step: Run 'nix build .#backend' to verify."

@@ -1,9 +1,16 @@
 packages:
+  common
   backend
-  frontend
-  shared
+  frontend-wasm
 
-with-compiler: ghc
-
+-- Pin specific versions to ensure Nix can fetch them without network access during build
 constraints:
-  reflex >= 0.9
+  reflex-dom == 0.6.3.4,
+  aeson == 2.2.3.0,
+  text == 2.1.1,
+  base >= 4.14 && < 5
+
+-- Disable documentation and tests to speed up Wasm build
+documentation: False
+tests: False
+benchmarks: False

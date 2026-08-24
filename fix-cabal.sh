@@ -1,3 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+DIR="/home/jimstutt/Dev/HRSM-Skeleton"
+
+echo "[HRSM] Overwriting common/common.cabal with a valid configuration..."
+
+cat << 'EOF' > "$DIR/common/common.cabal"
 cabal-version:      3.0
 name:               common
 version:            0.1.0.0
@@ -20,4 +28,7 @@ library
     RecordWildCards
     DataKinds
     TypeOperators
-    DeriveGeneric
+EOF
+
+echo "[HRSM] common.cabal fixed successfully."
+echo "Next step: Run 'nix build .#backend' to verify."

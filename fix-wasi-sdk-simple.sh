@@ -1,3 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+DIR="/home/jimstutt/Dev/HRSM-Skeleton"
+
+echo "[HRSM] Simplifying wasm32-wasi-sdk.nix to skip autoPatchelfHook..."
+
+cat << 'EOF' > "$DIR/pkgs/wasm32-wasi-sdk.nix"
 { pkgs }:
 
 let
@@ -23,3 +31,7 @@ pkgs.stdenv.mkDerivation {
   # No install phase needed - everything is already in $out from unpackPhase
   installPhase = "true";
 }
+EOF
+
+echo "[HRSM] wasm32-wasi-sdk.nix simplified successfully."
+echo "Next step: Run 'nix build .#frontend-wasm'"

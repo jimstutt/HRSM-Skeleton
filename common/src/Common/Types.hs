@@ -1,13 +1,18 @@
-module Common.Types where
+{-# LANGUAGE DeriveGeneric #-}
+module Common.Types
+  ( User(..)
+  , UserId
+  ) where
 
-import Data.Aeson (ToJSON, FromJSON)
 import Data.Text (Text)
 import GHC.Generics (Generic)
+import Data.Aeson (ToJSON, FromJSON)
 
--- | User data structure shared between frontend, backend, and database.
+type UserId = Int
+
 data User = User
-  { userId :: Int
-  , userName :: Text
+  { userId    :: Maybe UserId
+  , userName  :: Text
   , userEmail :: Text
   } deriving (Eq, Show, Generic)
 

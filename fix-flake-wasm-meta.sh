@@ -1,10 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+DIR="/home/jimstutt/Dev/HRSM-Skeleton"
+
+echo "[HRSM] Integrating ghc-wasm-meta into flake.nix for proper Reflex-DOM Wasm compilation..."
+
+cat << 'EOF' > "$DIR/flake.nix"
 {
   description = "HRSM-Skeleton: Haskell Wasm Reflex Servant App";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
-    ghc-wasm-meta.url = "gitlab:haskell-wasm/ghc-wasm-meta?host=gitlab.haskell.org";
+    # Add ghc-wasm-meta for proper Haskell -> WebAssembly compilation
+    ghc-wasm-meta.url = "github:haskell-wasm/ghc-wasm-meta";
   };
 
   outputs = { self, nixpkgs, flake-utils, ghc-wasm-meta }:
@@ -15,36 +24,26 @@
           config = { allowBroken = true; };
         };
         
+        # Standard GHC for backend and common
         haskellPkgs = pkgs.haskellPackages;
-        wasmToolchain = ghc-wasm-meta.packages.${system}.default;
+        
+        # Wasm GHC package set from ghc-wasm-meta
+        wasmHaskellPkgs = ghc-wasm-meta.packages.${system}.wasm32-wasi-ghc;
 
+        # 1. Build the local 'common' package first
         commonPkg = haskellPkgs.callCabal2nix "common" ./common {};
         
+        # 2. Build 'backend', explicitly passing the local 'common' package
         backendPkg = haskellPkgs.callCabal2nix "backend" ./backend {
           common = commonPkg;
         };
 
-        frontendWasmPkg = pkgs.stdenv.mkDerivation {
-          pname = "frontend-wasm";
-          version = "0.1.0.0";
-          src = ./.;
-          
-          nativeBuildInputs = [
-            wasmToolchain
-          ];
-
-          buildPhase = ''
-            echo "[HRSM] Building Wasm frontend via scripts/build-wasm.sh"
-            bash ./scripts/build-wasm.sh
-          '';
-
-          installPhase = ''
-            mkdir -p $out
-            cp dist-wasm/reactor.wasm $out/
-            echo "[HRSM] Wasm frontend built successfully: $out/reactor.wasm"
-          '';
+        # 3. Build 'frontend-wasm' using the Wasm Haskell package set
+        frontendWasmPkg = wasmHaskellPkgs.callCabal2nix "frontend-wasm" ./frontend-wasm {
+          common = commonPkg;
         };
 
+        # Emacs 30 package set
         emacsPkgs = pkgs.emacsPackagesFor pkgs.emacs30;
 
       in
@@ -63,17 +62,26 @@
             haskellPkgs.haskell-language-server
             pkgs.mariadb
             pkgs.pkg-config
-            wasmToolchain
-            (emacsPkgs.emacsWithPackages (epkgs: [ epkgs.gptel ]))
+            # Make the Wasm GHC compiler available in the dev shell
+            wasmHaskellPkgs.ghc 
+            
+            # Project-specific Emacs with gptel injected
+            (emacsPkgs.emacsWithPackages (epkgs: [
+              epkgs.gptel
+            ]))
           ];
           
           shellHook = ''
             echo "[HRSM] Development shell loaded."
             echo " - Backend: nix build .#backend"
             echo " - Frontend Wasm: nix build .#frontend-wasm"
-            echo " - Wasm Compiler: wasm32-wasi-ghc is available"
+            echo " - Emacs with gptel is available in this shell."
           '';
         };
       }
     );
 }
+EOF
+
+echo "[HRSM] flake.nix updated with ghc-wasm-meta."
+echo "Next step: Run 'nix build .#frontend-wasm'"
