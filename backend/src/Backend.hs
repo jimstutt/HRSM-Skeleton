@@ -1,30 +1,35 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE DataKinds #-}
-module Backend
-  ( server
-  ) where
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE OverloadedStrings #-}
 
-import Control.Monad.IO.Class (liftIO)
-import Servant ((:<|>)(..), Server, Handler)
-import Common.Types (User, UserId)
+module Backend where
+
 import Common.Api (API)
-import qualified DB
+import Common.Types (User, UserId(..))
+import DB (getUsers, createUser)
+import Network.Wai (Middleware)
+import Network.Wai.Middleware.Cors (simpleCors, cors, simpleCorsResourcePolicy, CorsResourcePolicy(..))
+import Servant
+import Servant.Server (Server)
 
-server :: DB.DBConn -> Server API
-server conn = getUsersHandler 
-         :<|> createUserHandler 
-         :<|> deleteUserHandler 
-         :<|> updateUserHandler
+-- CORS middleware to allow requests from Vite dev server
+corsMiddleware :: Middleware
+corsMiddleware = cors (const $ Just corsPolicy)
+  where
+    corsPolicy = simpleCorsResourcePolicy
+      { corsOrigins = Just (["http://localhost:5173", "http://localhost:3000"], True)
+      , corsMethods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+      , corsRequestHeaders = ["Content-Type", "Authorization"]
+      }
+
+server :: Server API
+server = getUsersHandler :<|> createUserHandler
   where
     getUsersHandler :: Handler [User]
-    getUsersHandler = liftIO $ DB.getUsers conn
-
+    getUsersHandler = liftIO getUsers
+    
     createUserHandler :: User -> Handler UserId
-    createUserHandler user = liftIO $ DB.createUser conn user
+    createUserHandler user = liftIO (createUser user)
 
-    deleteUserHandler :: UserId -> Handler ()
-    deleteUserHandler uid = liftIO $ DB.deleteUser conn uid
-
-    updateUserHandler :: UserId -> User -> Handler ()
-    updateUserHandler uid user = liftIO $ DB.updateUser conn uid user
+app :: Application
+app = corsMiddleware $ serve (Proxy :: Proxy API) server
