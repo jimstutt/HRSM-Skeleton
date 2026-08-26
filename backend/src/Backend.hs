@@ -25,7 +25,7 @@ corsMiddleware = cors (const $ Just corsPolicy)
       , corsRequestHeaders = ["Content-Type", "Authorization"]
       }
 
--- Helper to get a DB connection (adjust credentials if your MariaDB setup differs)
+-- Helper to get a DB connection
 getConn :: IO DBConn
 getConn = MySQL.connect MySQL.defaultConnectInfo 
   { MySQL.connectDatabase = "project_db"
@@ -33,7 +33,7 @@ getConn = MySQL.connect MySQL.defaultConnectInfo
   }
 
 server :: Server API
-server = getUsersHandler :<|> createUserHandler
+server = getUsersHandler :<|> createUserHandler :<|> deleteUserHandler :<|> updateUserHandler
   where
     getUsersHandler :: Handler [User]
     getUsersHandler = liftIO $ do
@@ -48,6 +48,13 @@ server = getUsersHandler :<|> createUserHandler
       res <- createUser conn user
       MySQL.close conn
       return res
+
+    -- Dummy handlers for DELETE and PUT to satisfy the Servant API contract
+    deleteUserHandler :: UserId -> Handler ()
+    deleteUserHandler _uid = return ()
+
+    updateUserHandler :: UserId -> User -> Handler ()
+    updateUserHandler _uid _user = return ()
 
 app :: Application
 app = corsMiddleware $ serve (Proxy :: Proxy API) server
