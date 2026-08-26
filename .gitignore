@@ -1,5 +1,6 @@
 .attr-cache
 .cabal-sandbox
+.cabal-wasm/
 *.hi
 *.o
 cabal.project.local
@@ -26,3 +27,4 @@ npm
 
 # Development files
 Claude.md
+.cabal-wasm/

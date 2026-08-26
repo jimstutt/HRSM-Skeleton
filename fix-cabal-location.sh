@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
+DIR="/home/jimstutt/Dev/HRSM-Skeleton"
+
+echo "[HRSM] Relocating Wasm Cabal directory to .cabal-wasm..."
+
+cat > "$DIR/scripts/build-wasm.sh" << 'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 mkdir -p "$DIR/dist-wasm"
 
@@ -27,3 +34,14 @@ OBJ_FILE=$(find "$DIR/dist-newstyle" -type f -name "Main.o" | grep "frontend-was
 
 wasm32-wasi-ghc -O2 -no-hs-main -optl-mexec-model=reactor -optl-Wl,--allow-undefined -optl-Wl,--export=start_reactor -optl-Wl,--export=reactor_stop -optl-Wl,--export-all "$OBJ_FILE" "$DIR/dist-wasm/stubs.o" -o "$DIR/dist-wasm/reactor.wasm"
 echo "[HRSM] Done: $DIR/dist-wasm/reactor.wasm"
+EOF
+
+chmod +x "$DIR/scripts/build-wasm.sh"
+
+# Add .cabal-wasm to gitignore
+if ! grep -q ".cabal-wasm" "$DIR/.gitignore" 2>/dev/null; then
+  echo ".cabal-wasm/" >> "$DIR/.gitignore"
+  echo "[HRSM] Added .cabal-wasm/ to .gitignore"
+fi
+
+echo "[HRSM] Build script updated. Wasm Cabal state now isolated in .cabal-wasm/"
