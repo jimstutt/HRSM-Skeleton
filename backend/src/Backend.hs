@@ -6,11 +6,14 @@ module Backend where
 
 import Common.Api (API)
 import Common.Types (User, UserId(..))
-import DB (getUsers, createUser)
-import Network.Wai (Middleware)
-import Network.Wai.Middleware.Cors (simpleCors, cors, simpleCorsResourcePolicy, CorsResourcePolicy(..))
+import DB (getUsers, createUser, DBConn)
+import Network.Wai (Middleware, Application)
+import Network.Wai.Middleware.Cors (cors, simpleCorsResourcePolicy, CorsResourcePolicy(..))
 import Servant
-import Servant.Server (Server)
+import Servant.Server (Server, serve)
+import Data.Proxy (Proxy(..))
+import Control.Monad.IO.Class (liftIO)
+import qualified Database.MySQL.Simple as MySQL
 
 -- CORS middleware to allow requests from Vite dev server
 corsMiddleware :: Middleware
@@ -22,14 +25,29 @@ corsMiddleware = cors (const $ Just corsPolicy)
       , corsRequestHeaders = ["Content-Type", "Authorization"]
       }
 
+-- Helper to get a DB connection (adjust credentials if your MariaDB setup differs)
+getConn :: IO DBConn
+getConn = MySQL.connect MySQL.defaultConnectInfo 
+  { MySQL.connectDatabase = "project_db"
+  , MySQL.connectUser = "root"
+  }
+
 server :: Server API
 server = getUsersHandler :<|> createUserHandler
   where
     getUsersHandler :: Handler [User]
-    getUsersHandler = liftIO getUsers
+    getUsersHandler = liftIO $ do
+      conn <- getConn
+      res <- getUsers conn
+      MySQL.close conn
+      return res
     
     createUserHandler :: User -> Handler UserId
-    createUserHandler user = liftIO (createUser user)
+    createUserHandler user = liftIO $ do
+      conn <- getConn
+      res <- createUser conn user
+      MySQL.close conn
+      return res
 
 app :: Application
 app = corsMiddleware $ serve (Proxy :: Proxy API) server
