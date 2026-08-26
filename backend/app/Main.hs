@@ -1,17 +1,17 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE DataKinds #-}
 module Main where
 
+import Backend (app)
 import Network.Wai.Handler.Warp (run)
-import Servant (serve)
-import Data.Proxy (Proxy(..))
-import Common.Api (API)
-import Backend (server)
-import qualified DB
+import qualified Database.MySQL.Simple as MySQL
+import DB (DBConn)
 
 main :: IO ()
 main = do
-  putStrLn "[HRSM] Starting backend on port 8080..."
-  conn <- DB.initDB
-  putStrLn "[HRSM] Database connection established."
-  run 8080 (serve (Proxy :: Proxy API) (server conn))
+  putStrLn "[HRSM] Backend connecting to MariaDB (project_db)..."
+  conn <- MySQL.connect MySQL.defaultConnectInfo 
+    { MySQL.connectDatabase = "project_db"
+    , MySQL.connectUser = "root"
+    }
+  
+  putStrLn "[HRSM] Backend starting on port 8080..."
+  run 8080 (app conn)

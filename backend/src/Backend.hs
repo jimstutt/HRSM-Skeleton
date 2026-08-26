@@ -13,7 +13,6 @@ import Servant
 import Servant.Server (Server, serve)
 import Data.Proxy (Proxy(..))
 import Control.Monad.IO.Class (liftIO)
-import qualified Database.MySQL.Simple as MySQL
 
 -- CORS middleware to allow requests from Vite dev server
 corsMiddleware :: Middleware
@@ -25,36 +24,22 @@ corsMiddleware = cors (const $ Just corsPolicy)
       , corsRequestHeaders = ["Content-Type", "Authorization"]
       }
 
--- Helper to get a DB connection
-getConn :: IO DBConn
-getConn = MySQL.connect MySQL.defaultConnectInfo 
-  { MySQL.connectDatabase = "project_db"
-  , MySQL.connectUser = "root"
-  }
-
-server :: Server API
-server = getUsersHandler :<|> createUserHandler :<|> deleteUserHandler :<|> updateUserHandler
+-- Server now takes a DBConn and returns the handlers
+server :: DBConn -> Server API
+server conn = getUsersHandler :<|> createUserHandler :<|> deleteUserHandler :<|> updateUserHandler
   where
     getUsersHandler :: Handler [User]
-    getUsersHandler = liftIO $ do
-      conn <- getConn
-      res <- getUsers conn
-      MySQL.close conn
-      return res
+    getUsersHandler = liftIO $ getUsers conn
     
     createUserHandler :: User -> Handler UserId
-    createUserHandler user = liftIO $ do
-      conn <- getConn
-      res <- createUser conn user
-      MySQL.close conn
-      return res
+    createUserHandler user = liftIO $ createUser conn user
 
-    -- Dummy handlers for DELETE and PUT to satisfy the Servant API contract
     deleteUserHandler :: UserId -> Handler ()
     deleteUserHandler _uid = return ()
 
     updateUserHandler :: UserId -> User -> Handler ()
     updateUserHandler _uid _user = return ()
 
-app :: Application
-app = corsMiddleware $ serve (Proxy :: Proxy API) server
+-- App takes the connection and applies it to the server
+app :: DBConn -> Application
+app conn = corsMiddleware $ serve (Proxy :: Proxy API) (server conn)
