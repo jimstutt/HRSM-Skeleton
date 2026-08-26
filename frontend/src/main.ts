@@ -11,10 +11,12 @@ async function getUsers(): Promise<User[]> {
 }
 
 async function createUser(user: Omit<User, 'userId'>): Promise<UserId> {
+  // Servant expects the full User object including userId for POST
+  const payload = { userId: 0, ...user };
   const response = await fetch(`${API_BASE}/api/users`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(user)
+    body: JSON.stringify(payload)
   });
   if (!response.ok) throw new Error(`Failed to create user: ${response.statusText}`);
   return response.json() as Promise<UserId>;
