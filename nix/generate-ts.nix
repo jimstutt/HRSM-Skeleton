@@ -7,7 +7,7 @@ pkgs.stdenv.mkDerivation {
     commonPkg
     pkgs.haskellPackages.ghc 
     pkgs.jq
-    pkgs.nodePackages.quicktype
+    pkgs.quicktype
   ];
   buildPhase = ''
     mkdir -p frontend/src
@@ -18,7 +18,7 @@ pkgs.stdenv.mkDerivation {
     # Extract only component schemas as standalone JSON Schema
     jq '.components.schemas' frontend/openapi.json > frontend/schemas.json
     
-    # Generate TypeScript from extracted schemas (quicktype handles JSON Schema natively)
+    # Generate TypeScript from extracted schemas
     quicktype --src-lang schema --lang typescript \
       --out frontend/src/api-types.ts \
       frontend/schemas.json
