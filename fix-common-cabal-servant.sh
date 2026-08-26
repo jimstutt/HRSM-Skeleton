@@ -1,3 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+DIR="/home/jimstutt/Dev/HRSM-Skeleton"
+
+echo "[HRSM] Adding servant to generate-openapi executable dependencies..."
+
+cat > "$DIR/common/common.cabal" << 'EOF'
 cabal-version: 3.0
 name: common
 version: 0.1.0.0
@@ -33,3 +40,11 @@ executable generate-openapi
     , aeson
     , bytestring
     , text
+EOF
+
+echo "[HRSM] common.cabal updated. Committing and rebuilding..."
+
+cd "$DIR"
+git add common/common.cabal
+git commit -m "[HRSM] Add servant to generate-openapi deps" || true
+nix build .#ts-types

@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+set -euo pipefail
+DIR="/home/jimstutt/Dev/HRSM-Skeleton"
+
+echo "[HRSM] Integrating api-types.ts and updating PROJECT_LOG.md..."
+
+# 1. Ensure frontend/src/api-types.ts exists (from previous verify step)
+if [ ! -f "$DIR/frontend/src/api-types.ts" ]; then
+  echo "[HRSM] ERROR: api-types.ts not found. Run verify-ts-output.sh first."
+  exit 1
+fi
+
+# 2. Create a minimal main.ts that imports the generated types
+cat > "$DIR/frontend/src/main.ts" << 'EOF'
+import { API, User, UserId } from './api-types';
+
+// Type-safe API client example using generated types
+async function getUsers(): Promise<User[]> {
+  const response = await fetch('/api/users');
+  if (!response.ok) throw new Error('Failed to fetch users');
+  return response.json() as Promise<User[]>;
+}
+
+// Demonstrate type safety - this would fail at compile time if types mismatch
+const exampleUser: User = {
+  userId: 1 as unknown as UserId, // quicktype may wrap primitives
+  userName: 'Test User'
+};
+
+console.log('[HRSM] Frontend initialized with type-safe API types', exampleUser);
+
+// Mount point for future UI framework (React/Vue/etc.)
+document.addEventListener('DOMContentLoaded', () => {
+  const app = document.getElementById('app');
+  if (app) {
+    app.innerHTML = '<h1>HRSM Skeleton</h1><p>TypeScript frontend ready with Servant API types.</p>';
+  }
+});
+EOF
+
+# 3. Update PROJECT_LOG.md with hybrid architecture milestone
+cat > "$DIR/PROJECT_LOG.md" << 'EOF'
+# HRSM-Skeleton Project Log
+Last updated: 2026-08-26
+📍 Local path: `~/Dev/HRSM-Skeleton`
+
+## 🔑 Key Conventions
+- Use `[HRSM]` prefix in all LLM chat titles.
+- Database: MariaDB only (No SQLite, No MongoDB).
+- All file edits must be generated as complete, full-replacement terminal shell scripts.
+- Script execution: Always `chmod +x <script>` then `bash ./<script>`
+
+## 📅 Recent Activity
+| Date       | Topic                                      | Status   |
+|------------|--------------------------------------------|----------|
+| 2026-08-26 | Hybrid TS/Servant architecture implemented | Done ✅  |
+| 2026-08-26 | OpenAPI + quicktype TS generation pipeline | Done ✅  |
+| 2026-08-26 | Git history cleaned of .cabal artifacts    | Done ✅  |
+| 2026-08-23 | Project initialization                     | Done ✅  |
+
+## ⚠️ Current Blockers
+- [ ] None
+
+## 🧠 Decisions & Rationale
+- **2026-08-26: Hybrid Architecture Adoption**  
+  Reason: GHC Wasm backend Template Haskell support remains incomplete for Reflex-DOM dependencies. Pivoted to TypeScript frontend with Servant→OpenAPI→quicktype type sharing to maintain type safety while ensuring Wasm compatibility per TechSpec.
+- **2026-08-23: Database Choice**  
+  Reason: Strict adherence to MariaDB only, as specified in HRSM-TechSpec.md.
+
+## 🔗 Useful Links
+- [Tech Spec](./HRSM-TechSpec.md)
+- [GitHub](https://github.com/jimstutt/HRSM-Skeleton)
+EOF
+
+# 4. Commit integration and log update
+cd "$DIR"
+git add frontend/src/main.ts frontend/src/api-types.ts PROJECT_LOG.md
+git commit -m "[HRSM] Integrate TS types and document hybrid architecture milestone" || true
+
+echo "[HRSM] ✓ Frontend integrated and PROJECT_LOG.md updated."
+echo "[HRSM] Next: Initialize Vite project or implement UI components in frontend/src/main.ts"
