@@ -30,7 +30,7 @@ initDB = do
 getUsers :: DBConn -> IO [User]
 getUsers conn = do
   rows <- query_ conn "SELECT id, name, email FROM users"
-  return [ User (Just uid) name email | (uid, name, email) <- rows ]
+  return [ User (UserId uid) name email | (uid, name, email) <- rows ]
 
 createUser :: DBConn -> User -> IO UserId
 createUser conn User{..} = do
