@@ -15,6 +15,9 @@ import Database.MySQL.Simple (ConnectInfo(..), Connection, connect, defaultConne
 import Database.MySQL.Simple.Types (Only(..))
 import Common.Types (User(..), UserId)
 
+unUserId :: UserId -> Int
+unUserId (UserId i) = i
+
 type DBConn = Connection
 
 initDB :: IO DBConn
@@ -39,10 +42,10 @@ createUser conn User{..} = do
 
 deleteUser :: DBConn -> UserId -> IO ()
 deleteUser conn uid = do
-  _ <- execute conn "DELETE FROM users WHERE id = ?" (Only uid)
+  _ <- execute conn "DELETE FROM users WHERE id = ?" (Only (unUserId uid))
   return ()
 
 updateUser :: DBConn -> UserId -> User -> IO ()
 updateUser conn uid User{..} = do
-  _ <- execute conn "UPDATE users SET name = ?, email = ? WHERE id = ?" (userName, userEmail, uid)
+  _ <- execute conn "UPDATE users SET name = ?, email = ? WHERE id = ?" (userName, userEmail, unUserId uid)
   return ()
