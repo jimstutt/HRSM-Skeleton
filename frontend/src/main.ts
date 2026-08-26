@@ -23,7 +23,7 @@ async function createUser(user: Omit<User, 'userId'>): Promise<UserId> {
 function renderUsers(users: User[]): string {
   if (users.length === 0) return '<p>No users found.</p>';
   return `<ul>${users.map(u => 
-    `<li><strong>${u.userName}</strong> (ID: ${u.userId})</li>`
+    `<li><strong>${u.userName}</strong> (${u.userEmail}) - ID: ${u.userId}</li>`
   ).join('')}</ul>`;
 }
 
@@ -31,54 +31,55 @@ document.addEventListener('DOMContentLoaded', async () => {
   const app = document.getElementById('app');
   if (!app) return;
 
-  app.innerHTML = `<h1>${PROJECT_NAME}</h1><p>Loading users...</p>`;
+  app.innerHTML = `
+    <h1>${PROJECT_NAME}</h1>
+    <div class="stack-info">
+      <strong>Stack Info</strong>
+      <p>Frontend: TypeScript (Vite)</p>
+      <p>Backend: Servant (Haskell)</p>
+      <p>Database: ${DB_BACKEND}</p>
+    </div>
+    <h2>Users</h2>
+    <div id="user-list"><p>Loading users...</p></div>
+    <hr/>
+    <h3>Add User</h3>
+    <form id="add-user-form">
+      <input type="text" id="username" placeholder="Username" required />
+      <input type="email" id="email" placeholder="Email" required />
+      <button type="submit">Add</button>
+    </form>
+    <div id="status"></div>
+  `;
 
-  try {
-    const users = await getUsers();
-    app.innerHTML = `
-      <h1>${PROJECT_NAME}</h1>
-      <div style="margin-bottom:1rem;font-size:0.9rem;color:#666;">
-        Stack: Haskell Servant + ${DB_BACKEND} | Frontend: TypeScript (Hybrid)
-      </div>
-      <h2>Users (${users.length})</h2>
-      ${renderUsers(users)}
-      <hr/>
-      <h3>Add User</h3>
-      <form id="add-user-form">
-        <input type="text" id="username" placeholder="Username" required />
-        <button type="submit">Add</button>
-      </form>
-      <div id="status"></div>
-    `;
+  const userList = document.getElementById('user-list')!;
+  const form = document.getElementById('add-user-form') as HTMLFormElement;
+  const statusDiv = document.getElementById('status')!;
 
-    const form = document.getElementById('add-user-form') as HTMLFormElement;
-    const statusDiv = document.getElementById('status')!;
-    
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const username = (document.getElementById('username') as HTMLInputElement).value;
-      statusDiv.textContent = 'Creating...';
-      try {
-        await createUser({ userName: username });
-        statusDiv.textContent = '✓ Created! Refreshing...';
-        const updatedUsers = await getUsers();
-        app.querySelector('h2')!.textContent = `Users (${updatedUsers.length})`;
-        app.querySelector('ul')!.outerHTML = renderUsers(updatedUsers);
-        (document.getElementById('username') as HTMLInputElement).value = '';
-        statusDiv.textContent = '';
-      } catch (err) {
-        statusDiv.textContent = `✗ Error: ${err instanceof Error ? err.message : 'Unknown'}`;
-      }
-    });
-
-  } catch (err) {
-    app.innerHTML = `
-      <h1>${PROJECT_NAME}</h1>
-      <div style="margin-bottom:1rem;font-size:0.9rem;color:#666;">
-        Stack: Haskell Servant + ${DB_BACKEND} | Frontend: TypeScript (Hybrid)
-      </div>
-      <p style="color:red;">⚠ Failed to load users: ${err instanceof Error ? err.message : 'Unknown error'}</p>
-      <p>Ensure backend is running: <code>nix run .#backend</code></p>
-    `;
+  async function refreshUsers() {
+    try {
+      const users = await getUsers();
+      userList.innerHTML = renderUsers(users);
+    } catch (err) {
+      userList.innerHTML = `<p class="error">⚠ Failed to load users: ${err instanceof Error ? err.message : 'Unknown error'}. Is the backend running on port 8080?</p>`;
+    }
   }
+
+  await refreshUsers();
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const username = (document.getElementById('username') as HTMLInputElement).value;
+    const email = (document.getElementById('email') as HTMLInputElement).value;
+    statusDiv.textContent = 'Creating...';
+    try {
+      await createUser({ userName: username, userEmail: email });
+      statusDiv.textContent = '✓ Created!';
+      (document.getElementById('username') as HTMLInputElement).value = '';
+      (document.getElementById('email') as HTMLInputElement).value = '';
+      await refreshUsers();
+      setTimeout(() => { statusDiv.textContent = ''; }, 2000);
+    } catch (err) {
+      statusDiv.innerHTML = `<span class="error">✗ Error: ${err instanceof Error ? err.message : 'Unknown'}</span>`;
+    }
+  });
 });
