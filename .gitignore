@@ -1,4 +1,5 @@
 .attr-cache
+.cabal
 .cabal-sandbox
 .cabal-wasm/
 *.hi
