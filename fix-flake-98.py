@@ -1,5 +1,7 @@
-{
-  description = "HRSM-Skeleton: Haskell Wasm Reflex Servant App";
+import os
+D = "/home/jimstutt/Dev/HRSM-Skeleton"
+flake = """{
+  description = "HRSM-Skeleton";
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
@@ -10,13 +12,11 @@
       let
         pkgs = import nixpkgs { inherit system; config = { allowBroken = true; }; };
         haskellPkgs = pkgs.haskellPackages;
-        # GHC 9.10 has base-4.20 (satisfies reflex-dom < 4.22) AND includes Wasm TH support
-        wasmToolchain = ghc-wasm-meta.packages.${system}.all_9_10;
+        wasmToolchain = ghc-wasm-meta.packages.${system}.all_9_8;
         commonPkg = haskellPkgs.callCabal2nix "common" ./common {};
         backendPkg = haskellPkgs.callCabal2nix "backend" ./backend { common = commonPkg; };
       in {
         packages = {
-          ts-types = pkgs.callPackage ./nix/generate-ts.nix { inherit commonPkg; };
           inherit commonPkg backendPkg;
           common = commonPkg;
           backend = backendPkg;
@@ -31,8 +31,11 @@
             pkgs.wasmtime
             wasmToolchain 
           ];
-          shellHook = "echo '[HRSM] Dev shell loaded. Wasm Compiler: wasm32-wasi-ghc (GHC 9.10)'";
+          shellHook = "echo '[HRSM] Dev shell loaded. Wasm Compiler: wasm32-wasi-ghc (GHC 9.8)'";
         };
       }
     );
-}
+}"""
+with open(os.path.join(D, "flake.nix"), "w") as f:
+    f.write(flake)
+print("[HRSM] flake.nix updated to use all_9_8.")

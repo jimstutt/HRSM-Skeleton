@@ -1,36 +1,40 @@
-{-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
-
+{-# LANGUAGE ForeignFunctionInterface #-}
 module Main where
 
-import Reflex.Dom
+import Miso
+import Miso.String (MisoString)
 import System.IO (hFlush, stdout)
 
 foreign export ccall start_reactor :: IO ()
 foreign export ccall reactor_stop  :: IO ()
 
-mainWidget :: DomBuilder t m => m ()
-mainWidget = do
-  el "h1" $ text "HRSM Reflex-DOM Counter"
-  el "div" $ do
-    (count, _) <- button "Increment"
-    text "Count: "
-    dynText (fmap show count)
+data Model = Model { count :: Int }
+data Action = AddOne | SubtractOne | NoOp
 
 start_reactor :: IO ()
 start_reactor = do
-  putStrLn "[HRSM] Initializing Reflex-DOM..."
-  hFlush stdout
-  -- In a real browser, we'd use mainWidgetInBody or similar
-  -- For now, we just verify it compiles and runs
-  putStrLn "[HRSM] Reflex-DOM widget defined successfully."
+  putStrLn "[HRSM] Miso Reactor initialized."
   hFlush stdout
 
 reactor_stop :: IO ()
 reactor_stop = do
-  putStrLn "[HRSM] Reactor stopped"
+  putStrLn "[HRSM] Miso Reactor stopped."
   hFlush stdout
+
+updateModel :: Action -> Model -> Effect Action Model
+updateModel AddOne m = m { count = count m + 1 } <# pure NoOp
+updateModel SubtractOne m = m { count = count m - 1 } <# pure NoOp
+updateModel NoOp m = pure m
+
+viewModel :: Model -> View Action
+viewModel Model{..} =
+  div_ []
+    [ button_ [ onClick SubtractOne ] [ text "-" ]
+    , text (ms (show count))
+    , button_ [ onClick AddOne ] [ text "+" ]
+    ]
 
 main :: IO ()
 main = pure ()
