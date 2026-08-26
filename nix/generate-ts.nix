@@ -6,18 +6,16 @@ pkgs.stdenv.mkDerivation {
   nativeBuildInputs = [ 
     commonPkg
     pkgs.haskellPackages.ghc 
-    pkgs.quicktype 
+    pkgs.nodePackages.openapi-typescript
   ];
   buildPhase = ''
     mkdir -p frontend/src
     
-    # Run the pre-built generate-openapi executable from commonPkg
+    # Generate OpenAPI spec
     generate-openapi --output=frontend/openapi.json
     
-    # Generate TypeScript from OpenAPI (auto-detects format)
-    quicktype --lang typescript \
-      --out frontend/src/api-types.ts \
-      frontend/openapi.json
+    # Generate TypeScript using openapi-typescript (proper OpenAPI support)
+    openapi-typescript frontend/openapi.json -o frontend/src/api-types.ts
   '';
   installPhase = ''
     mkdir -p $out
