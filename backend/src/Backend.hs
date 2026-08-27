@@ -5,8 +5,8 @@
 module Backend where
 
 import Common.Api (API)
-import Common.Types (User, UserId(..))
-import DB (getUsers, createUser, DBConn)
+import Common.Types (User, UserId)
+import DB (getUsers, createUser, deleteUser, updateUser, DBConn)
 import Network.Wai (Middleware, Application)
 import Network.Wai.Middleware.Cors (cors, simpleCorsResourcePolicy, CorsResourcePolicy(..))
 import Servant
@@ -14,7 +14,6 @@ import Servant.Server (Server, serve)
 import Data.Proxy (Proxy(..))
 import Control.Monad.IO.Class (liftIO)
 
--- CORS middleware to allow requests from Vite dev server
 corsMiddleware :: Middleware
 corsMiddleware = cors (const $ Just corsPolicy)
   where
@@ -24,7 +23,6 @@ corsMiddleware = cors (const $ Just corsPolicy)
       , corsRequestHeaders = ["Content-Type", "Authorization"]
       }
 
--- Server now takes a DBConn and returns the handlers
 server :: DBConn -> Server API
 server conn = getUsersHandler :<|> createUserHandler :<|> deleteUserHandler :<|> updateUserHandler
   where
@@ -35,11 +33,10 @@ server conn = getUsersHandler :<|> createUserHandler :<|> deleteUserHandler :<|>
     createUserHandler user = liftIO $ createUser conn user
 
     deleteUserHandler :: UserId -> Handler ()
-    deleteUserHandler _uid = return ()
+    deleteUserHandler uid = liftIO $ deleteUser conn uid
 
     updateUserHandler :: UserId -> User -> Handler ()
-    updateUserHandler _uid _user = return ()
+    updateUserHandler uid user = liftIO $ updateUser conn uid user
 
--- App takes the connection and applies it to the server
 app :: DBConn -> Application
 app conn = corsMiddleware $ serve (Proxy :: Proxy API) (server conn)

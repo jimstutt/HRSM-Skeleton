@@ -1,34 +1,16 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module DB
-  ( DBConn
-  , initDB
-  , getUsers
-  , createUser
-  , deleteUser
-  , updateUser
-  ) where
+module DB where
 
-import Data.Text (Text)
-import Database.MySQL.Simple (ConnectInfo(..), Connection, connect, defaultConnectInfo, execute, query_)
-import Database.MySQL.Simple.Types (Only(..))
 import Common.Types (User(..), UserId(..))
-
-unUserId :: UserId -> Int
-unUserId (UserId i) = i
+import Database.MySQL.Simple
+import Data.Int (Int64)
 
 type DBConn = Connection
 
-initDB :: IO DBConn
-initDB = do
-  putStrLn "[HRSM] Connecting to MariaDB..."
-  let connInfo = defaultConnectInfo 
-        { connectUser = "hrsm_user"
-        , connectPassword = "hrsm_password"
-        , connectDatabase = "project_db"
-        }
-  connect connInfo
+unUserId :: UserId -> Int
+unUserId (UserId i) = i
 
 getUsers :: DBConn -> IO [User]
 getUsers conn = do
@@ -38,7 +20,8 @@ getUsers conn = do
 createUser :: DBConn -> User -> IO UserId
 createUser conn User{..} = do
   _ <- execute conn "INSERT INTO users (name, email) VALUES (?, ?)" (userName, userEmail)
-  return (UserId 1) 
+  [Only (newId :: Int64)] <- query_ conn "SELECT LAST_INSERT_ID()"
+  return (UserId (fromIntegral newId))
 
 deleteUser :: DBConn -> UserId -> IO ()
 deleteUser conn uid = do
@@ -47,5 +30,6 @@ deleteUser conn uid = do
 
 updateUser :: DBConn -> UserId -> User -> IO ()
 updateUser conn uid User{..} = do
-  _ <- execute conn "UPDATE users SET name = ?, email = ? WHERE id = ?" (userName, userEmail, unUserId uid)
+  _ <- execute conn "UPDATE users SET name = ?, email = ? WHERE id = ?" 
+                   (userName, userEmail, unUserId uid)
   return ()
