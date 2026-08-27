@@ -20,7 +20,8 @@ getUsers conn = do
 createUser :: DBConn -> User -> IO UserId
 createUser conn User{..} = do
   _ <- execute conn "INSERT INTO users (name, email) VALUES (?, ?)" (userName, userEmail)
-  [Only (newId :: Int64)] <- query_ conn "SELECT LAST_INSERT_ID()"
+  -- Fix: Move type signature to the expression level to avoid ScopedTypeVariables requirement
+  [Only newId] <- query_ conn "SELECT LAST_INSERT_ID()" :: IO [Only Int64]
   return (UserId (fromIntegral newId))
 
 deleteUser :: DBConn -> UserId -> IO ()
