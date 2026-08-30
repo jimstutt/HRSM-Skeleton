@@ -1,5 +1,5 @@
 {
-  description = "HRSM-Skeleton: Haskell Wasm Reflex Servant App";
+  description = "HSMWasm: Haskell Servant Mariadb Wasm App";
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
@@ -10,7 +10,7 @@
       let
         pkgs = import nixpkgs { inherit system; config = { allowBroken = true; }; };
         haskellPkgs = pkgs.haskellPackages;
-        # GHC 9.10 has base-4.20 (satisfies reflex-dom < 4.22) AND includes Wasm TH support
+        # GHC 9.10 has base-4.20 includes Wasm TH support
         wasmToolchain = ghc-wasm-meta.packages.${system}.all_9_10;
         commonPkg = haskellPkgs.callCabal2nix "common" ./common {};
         backendPkg = haskellPkgs.callCabal2nix "backend" ./backend { common = commonPkg; };
