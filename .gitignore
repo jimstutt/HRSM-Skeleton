@@ -8,6 +8,7 @@ dist/
 dist-wasm/
 *.hi
 *.o
+*.env
 *.dyn_hi
 *.dyn_o
 .cabal-wasm/

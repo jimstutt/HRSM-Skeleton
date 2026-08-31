@@ -22,4 +22,4 @@ executable backend
     , text
     , mysql-simple
     , resource-pool
-    , mariadb
+
